@@ -49,7 +49,7 @@ test.describe('Trajets', () => {
   });
 
   test('bouton Détails ouvre le drawer', async ({ page }) => {
-    const btn = page.getByRole('button', { name: /Détails/ }).first();
+    const btn = page.getByRole('button', { name: /détails/i }).first();
     await btn.click();
     await expect(page.getByRole('dialog')).toBeVisible();
     // Drawer header shows "{depart.ville} → {arrivee.ville}"

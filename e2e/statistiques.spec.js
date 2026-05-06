@@ -26,16 +26,17 @@ test.describe('Statistiques', () => {
   });
 
   test('affiche le graphique Top 10 lignes', async ({ page }) => {
-    await expect(page.getByText('Top 10 lignes')).toBeVisible();
-    await expect(page.locator('svg text').filter({ hasText: 'ThalysParis-Bruxelles' })).toBeVisible(
-      { timeout: 10000 },
-    );
+    const chart = page.getByRole('img', { name: 'Graphique top 10 des lignes' });
+    await expect(chart).toBeVisible();
+    await expect(
+      chart.locator('svg text').filter({ hasText: 'ThalysParis-Bruxelles' }),
+    ).toBeVisible({ timeout: 10000 });
   });
 
   test('affiche le comparatif jour/nuit', async ({ page }) => {
-    await expect(page.getByText('Comparatif Jour vs Nuit')).toBeVisible();
-    // These values come from the <table> rendered from cmp.indicateurs
-    await expect(page.getByRole('cell', { name: 'Nombre de trajets' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'Durée moyenne' })).toBeVisible();
+    const section = page.getByRole('region', { name: 'Comparatif jour et nuit' });
+    await expect(section).toBeVisible();
+    await expect(section.getByRole('cell', { name: 'Nombre de trajets' })).toBeVisible();
+    await expect(section.getByRole('cell', { name: 'Durée moyenne' })).toBeVisible();
   });
 });
