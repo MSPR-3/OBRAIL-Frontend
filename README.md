@@ -1,135 +1,326 @@
-# MSPR1-ObRail — Tableau de bord React
+# OBRAIL-Frontend — Tableau de bord ferroviaire européen
 
-## Présentation
+![React](https://img.shields.io/badge/React-18.3-blue)
+![Vite](https://img.shields.io/badge/Vite-5.4-purple)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue)
+![Nginx](https://img.shields.io/badge/Nginx-Alpine-green)
+![Playwright](https://img.shields.io/badge/Tests-E2E-orange)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-orange)
 
-MSPR1-ObRail est un tableau de bord frontend développé en React permettant de visualiser des données ferroviaires européennes : trajets, opérateurs, lignes, émissions de CO₂, historique des imports, etc.
+## Contexte
 
-L’application consomme une API REST mais propose aussi des données fictives pour le développement local.
-
----
-
-## Fonctionnalités principales
-
-- **Vue Dashboard :** indicateurs clés (KPI), volume de trajets par opérateur, CO₂ par opérateur, derniers imports
-- **Statistiques :** CO₂ total, comparatifs jour/nuit, top liaisons, lignes, opérateurs, pays
-- **Historique des imports :** liste et filtrage des imports, métriques (réussite, échec, partiel)
-- **Personnalisation :** thème jour/nuit, densité, couleur d’accent, affichage de la sidebar
-- **Vérification automatique de la santé de l’API**
+Ce projet s'inscrit dans le cadre du **MSPR**, formation DIADS/DIA.
+L'interface **OBRAIL Europe** est le tableau de bord frontend de l'observatoire des données ferroviaires européennes. Elle permet de visualiser les trajets, statistiques, émissions CO₂ et l'historique des importations de données.
 
 ---
 
-## Stack technique
+## Fonctionnalités
 
-- **React 18** + **Vite**
-- **Recharts** (visualisation)
-- **Playwright** (tests e2e)
-- **Nginx** (serveur de production via Docker)
+### Dashboard
 
-### Scripts NPM
+| Widget                   | Description                                                |
+| ------------------------ | ---------------------------------------------------------- |
+| **KPI globaux**          | CO₂ total, CO₂ moyen/trajet, durée moyenne, lignes actives |
+| **Volume par opérateur** | Graphique barres comparant les trajets par compagnie       |
+| **CO₂ par opérateur**    | Émissions moyennes par compagnie ferroviaire               |
+| **Derniers imports**     | Badge de statut du dernier chargement réussi               |
 
-- `npm run dev` — lance l’application en mode développement
-- `npm run build` — build de production (dans `dist/`)
-- `npm run preview` — prévisualisation du build
-- `npm run test:e2e` — lance les tests end-to-end Playwright
+### Statistiques
+
+| Section              | Contenu                                               |
+| -------------------- | ----------------------------------------------------- |
+| **Jour vs Nuit**     | Pie chart comparatif avec compteurs                   |
+| **Opérateurs**       | Barres trajets + CO₂ moyen par opérateur              |
+| **Top 10 lignes**    | Classement horizontal des lignes les plus fréquentées |
+| **Trajets par pays** | Répartition géographique des départs                  |
+| **Comparatif J/N**   | Tableau détaillé (trajets, durée, CO₂)                |
+
+### Trajets
+
+- Tableau paginé des trajets avec colonnes : ID, Départ, Arrivée, Durée, CO₂, Opérateur, Ligne
+- **Filtres** : opérateur, ligne, pays de départ, pays d'arrivée
+- **Drawer de détails** : fiche complète d'un trajet au clic sur "Détails"
+
+### Imports
+
+- Banner du dernier import réussi avec indicateur visuel
+- Historique complet dans un tableau paginé
+- Métriques de réussite/échec/partiel
+
+### Personnalisation
+
+- **Thème jour/nuit** basculable
+- **Densité** d'affichage ajustable
+- **Couleur d'accent** personnalisable
+- **Vérification automatique** de la santé de l'API
 
 ---
 
-## Installation & développement
+## Stack Technique
 
-1. **Cloner le repo puis installer les dépendances :**
-
-   ```sh
-   npm install
-   ```
-
-2. **Lancer en mode développement :**
-
-   ```sh
-   npm run dev
-   ```
-
-   > L’API `/api` est proxifiée vers `http://localhost:8000` (voir `vite.config.js`).
-
-3. **Build de production :**
-
-   ```sh
-   npm run build
-   ```
+| Couche            | Technologie                      |
+| ----------------- | -------------------------------- |
+| **Framework**     | React 18 (fonctionnel, hooks)    |
+| **Build**         | Vite 5.4                         |
+| **Visualisation** | Recharts                         |
+| **Routing**       | Hash Router (React Router)       |
+| **Tests E2E**     | Playwright                       |
+| **Linting**       | ESLint 9 (flat config)           |
+| **Formatage**     | Prettier                         |
+| **Hooks Git**     | Husky + lint-staged + commitlint |
+| **Production**    | Nginx Alpine (Docker)            |
 
 ---
 
-## Docker & déploiement
+## Structure du projet
 
-Une image Docker est prévue pour servir le frontend en production avec *nginx* :
+```
+OBRAIL-Frontend/
+├── src/
+│   ├── main.jsx                # Point d'entrée React
+│   ├── App.jsx                 # Router + layout principal
+│   ├── api.js                  # Couche d'appels API
+│   ├── mockData.js             # Données fictives (développement)
+│   ├── utils.js                # Fonctions utilitaires (formatage, couleurs)
+│   ├── TweaksPanel.jsx         # Panneau de personnalisation UI
+│   ├── hooks/
+│   │   └── useApi.js           # Hook personnalisé pour les appels API
+│   ├── components/
+│   │   ├── Layout.jsx          # Sidebar, MetricCard, Badge, Drawer
+│   │   └── Shared.jsx          # ChartTooltip, composants réutilisables
+│   └── pages/
+│       ├── Dashboard.jsx       # Page d'accueil avec KPIs
+│       ├── Trajets.jsx         # Tableau des trajets avec filtres
+│       ├── Statistiques.jsx    # Graphiques et comparatifs
+│       ├── Imports.jsx         # Historique des imports
+│       └── Documentation.jsx   # Documentation API intégrée
+├── e2e/                        # Tests Playwright E2E
+│   ├── mocks.js                # Mocks des réponses API
+│   ├── dashboard.spec.js
+│   ├── trajets.spec.js
+│   ├── statistiques.spec.js
+│   ├── imports.spec.js
+│   └── health.spec.js
+├── styles/
+│   └── global.css              # Styles globaux + variables CSS
+├── .github/workflows/          # Pipelines CI/CD
+│   ├── ci.yml                  # Lint + Build
+│   └── cd.yml                  # Déploiement Vercel
+│   └── docker.yml              # Build & push image Docker
+├── Dockerfile                  # Build multi-stage (Node → Nginx)
+├── nginx.conf                  # Configuration Nginx production
+├── vite.config.js              # Config Vite + proxy API
+├── eslint.config.js            # ESLint flat config
+├── .prettierrc                 # Configuration Prettier
+├── commitlint.config.js        # Convention de commits
+├── package.json
+└── README.md                   # Ce fichier
+```
 
-```Dockerfile
-FROM node:20-alpine AS build
+---
+
+## Installation & Développement
+
+### Prérequis
+
+- Node.js 20+
+- npm
+- OBRAIL-API démarrée sur `http://localhost:8000` (pour le mode connecté)
+
+### Installation
+
+```powershell
+cd OBRAIL-Frontend
+npm install
+```
+
+### Mode développement
+
+```powershell
+npm run dev
+```
+
+L'application est accessible sur **http://localhost:5173**.
+
+> Le proxy Vite redirige automatiquement les requêtes `/api` vers `http://localhost:8000`.
+
+### Build de production
+
+```powershell
+npm run build
+```
+
+Le résultat est généré dans le dossier `dist/`.
+
+### Prévisualisation du build
+
+```powershell
+npm run preview
+```
+
+---
+
+## Scripts NPM
+
+| Commande           | Description                              |
+| ------------------ | ---------------------------------------- |
+| `npm run dev`      | Serveur de développement avec hot-reload |
+| `npm run build`    | Build optimisé pour la production        |
+| `npm run preview`  | Prévisualisation du build local          |
+| `npm run test:e2e` | Tests end-to-end Playwright              |
+| `npm run lint`     | Lint + auto-fix avec ESLint              |
+| `npm run format`   | Formatage avec Prettier                  |
+| `npm run prepare`  | Installation automatique des hooks Husky |
+
+---
+
+## Qualité de code
+
+### ESLint
+
+Configuration moderne (flat config) avec plugins React, React Hooks et Import order :
+
+```js
+// eslint.config.js
+- Rules React recommended
+- react-hooks/recommended
+- import/order (alphabétique, newlines-between)
+- no-unused-vars (warn)
+```
+
+### Prettier
+
+```json
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "tabWidth": 2
+}
+```
+
+### Husky + lint-staged + commitlint
+
+À chaque commit :
+
+1. **lint-staged** exécute ESLint + Prettier sur les fichiers modifiés
+2. **commitlint** vérifie que le message suit les Conventional Commits
+
+```
+feat: add new dashboard widget
+fix: correct CO₂ calculation
+docs: update API endpoints
+test: add e2e scenario for imports
+```
+
+---
+
+## Tests End-to-End
+
+Les tests Playwright vérifient le rendu et le comportement de chaque page :
+
+| Test         | Vérification                               |
+| ------------ | ------------------------------------------ |
+| Dashboard    | KPIs, volumes opérateurs, derniers imports |
+| Trajets      | Tableau, filtres, drawer de détails        |
+| Statistiques | Graphiques J/N, top lignes, comparatif     |
+| Imports      | Banner, historique, métriques              |
+| Health       | Navigation, statut API                     |
+
+### Exécuter les tests
+
+```powershell
+npm run test:e2e
+```
+
+Les tests utilisent des **mocks API** pour ne pas dépendre du backend.
+
+---
+
+## Docker & Production
+
+### Image Docker
+
+Build multi-stage pour une image de production minimale (~25 MB) :
+
+```dockerfile
+# Build stage
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 RUN npm run build
 
+# Production stage
 FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```
 
-```
-# Commandes typiques
-docker build -t obrail-dashboard .
-docker run -p 8080:80 obrail-dashboard
-```
+### Nginx
 
-Le serveur nginx redirige `/api/` vers un backend API (voir `nginx.conf`).
+- SPA routing (fallback sur `index.html`)
+- Proxy `/api/` vers le backend
+- Compression Gzip activée
 
----
+### Build & Run
 
-## Tests end-to-end
-
-Des scénarios Playwright E2E sont définis dans le dossier `e2e/`. Ils vérifient le rendu des pages, la présence des indicateurs, l’historique d’import, les métriques, etc.
-
-```sh
-npm run test:e2e
+```powershell
+docker build -t obrail-frontend:latest .
+docker run -p 80:80 obrail-frontend:latest
 ```
 
----
+### CI/CD — Build & Push automatisé
 
-## Structure principale du projet
+Le workflow `docker.yml` construit et pousse l'image sur GHCR :
 
-```
-/               # Racine
-├── src/        # Code source React
-│   ├── api.js            # Gestion des requêtes API
-│   ├── mockData.js       # Données fictives pour tests/démo
-│   ├── App.jsx, main.jsx # Entrée app
-│   └── pages/            # Pages principales (Dashboard, Imports…)
-├── e2e/       # Tests end-to-end
-├── styles/    # Styles globaux
-├── nginx.conf # Config nginx de production
-├── Dockerfile # Build d’image frontend
-├── vite.config.js # Config Vite et proxy API
-└── package.json   # Dépendances/scripts
+| Événement      | Tag Docker                               |
+| -------------- | ---------------------------------------- |
+| Push `main`    | `ghcr.io/mspr-3/obrail-frontend:main`    |
+| Push `develop` | `ghcr.io/mspr-3/obrail-frontend:develop` |
+| Tag `v1.2.0`   | `ghcr.io/mspr-3/obrail-frontend:1.2.0`   |
+| PR #42         | `ghcr.io/mspr-3/obrail-frontend:pr-42`   |
+
+### Récupérer l'image
+
+```powershell
+docker pull ghcr.io/mspr-3/obrail-frontend:main
+docker run -p 80:80 ghcr.io/mspr-3/obrail-frontend:main
 ```
 
 ---
 
-## Configuration/Personnalisation
+## Architecture d'intégration
 
-- **Le fichier `nginx.conf`** permet d’adapter le proxy vers l’API backend.
-- **Tweaks UI** : thème, densité, couleurs sont modifiables depuis l’UI, stockés côté navigateur.
-- **Donnees fictives** : modifiez `src/mockData.js` pour adapter le jeu de test.
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  OBRAIL-Frontend │────▶│   OBRAIL-API     │────▶│   OBRAIL-BDD     │
+│  (React/Vite)    │     │  (FastAPI)       │     │  (PostgreSQL)    │
+│   Port 5173      │     │   Port 8000      │     │   Port 5434      │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
 
 ---
 
-## Pour aller plus loin
+## Configuration
 
-- Adapter le backend pour répondre au contrat d’API attendu (`/api/...`).
-- Ajouter/réaliser des composants ou pages additionnels selon vos besoins spécifiques.
+### Variables d'environnement
+
+| Variable       | Description          | Exemple                 |
+| -------------- | -------------------- | ----------------------- |
+| `VITE_API_URL` | URL de l'API backend | `http://localhost:8000` |
+
+### Proxy Vite
+
+Développement : les requêtes `/api` sont redirigées vers l'API locale via `vite.config.js`.
+
+Production : le proxy est géré par Nginx (`nginx.conf`).
 
 ---
 
 ## Licence
 
-Projet pédagogique. Utilisation libre.
+Projet pédagogique. Usage interne — DIADS/DIA.
