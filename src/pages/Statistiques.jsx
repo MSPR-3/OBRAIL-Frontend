@@ -108,7 +108,7 @@ export default function Statistiques() {
       </section>
       <section className="page-section">
         <div className="grid-2-12">
-          <div className="chart-card">
+          <div className="chart-card" aria-label="Graphique comparatif jour vs nuit" role="img">
             <div className="chart-card-head">
               <div>
                 <div className="chart-card-title">Jour vs Nuit</div>
@@ -143,8 +143,10 @@ export default function Statistiques() {
                 paddingTop: 8,
                 borderTop: '1px solid var(--border)',
               }}
+              role="list"
+              aria-label="Répartition des trajets jour et nuit"
             >
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center' }} role="listitem">
                 <div
                   style={{
                     display: 'flex',
@@ -161,6 +163,7 @@ export default function Statistiques() {
                 >
                   <span
                     style={{ width: 8, height: 8, background: 'var(--accent)', borderRadius: 2 }}
+                    aria-hidden="true"
                   />
                   Jour
                 </div>
@@ -175,7 +178,7 @@ export default function Statistiques() {
                   {kpi?.trajets_jour ?? 0}
                 </div>
               </div>
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center' }} role="listitem">
                 <div
                   style={{
                     display: 'flex',
@@ -190,7 +193,10 @@ export default function Statistiques() {
                     fontWeight: 600,
                   }}
                 >
-                  <span style={{ width: 8, height: 8, background: '#6FA3DB', borderRadius: 2 }} />
+                  <span
+                    style={{ width: 8, height: 8, background: '#6FA3DB', borderRadius: 2 }}
+                    aria-hidden="true"
+                  />
                   Nuit
                 </div>
                 <div
@@ -207,7 +213,11 @@ export default function Statistiques() {
             </div>
           </div>
 
-          <div className="chart-card">
+          <div
+            className="chart-card"
+            aria-label="Graphique trajets et CO₂ par opérateur"
+            role="img"
+          >
             <div className="chart-card-head">
               <div>
                 <div className="chart-card-title">Trajets et CO₂ par opérateur</div>
@@ -239,6 +249,99 @@ export default function Statistiques() {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="page-section">
+        <div className="grid-2">
+          <div
+            className="chart-card"
+            aria-label="Graphique top 10 des lignes les plus fréquentées"
+            role="img"
+          >
+            <div className="chart-card-head">
+              <div>
+                <div className="chart-card-title">Top 10 lignes</div>
+                <div className="chart-card-sub">GET /stats/volumes?groupby=ligne</div>
+              </div>
+            </div>
+            <div style={{ height: 280 }}>
+              <ResponsiveContainer>
+                <BarChart
+                  data={topLignes}
+                  layout="vertical"
+                  margin={{ top: 5, right: 10, bottom: 5, left: 120 }}
+                >
+                  <CartesianGrid {...GRID_STYLE} horizontal={false} />
+                  <XAxis type="number" {...AXIS_STYLE} />
+                  <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={120} />
+                  <Tooltip
+                    cursor={{ fill: 'var(--bg-elevated)' }}
+                    content={<ChartTooltip unit=" trajets" />}
+                  />
+                  <Bar dataKey="nb_trajets" fill="var(--accent)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="chart-card" aria-label="Graphique trajets par pays de départ" role="img">
+            <div className="chart-card-head">
+              <div>
+                <div className="chart-card-title">Trajets par pays de départ</div>
+                <div className="chart-card-sub">GET /stats/volumes?groupby=pays_depart</div>
+              </div>
+            </div>
+            <div style={{ height: 280 }}>
+              <ResponsiveContainer>
+                <BarChart data={paysData} margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
+                  <CartesianGrid {...GRID_STYLE} vertical={false} />
+                  <XAxis dataKey="name" {...AXIS_STYLE} />
+                  <YAxis {...AXIS_STYLE} />
+                  <Tooltip
+                    cursor={{ fill: 'var(--bg-elevated)' }}
+                    content={<ChartTooltip unit=" départs" />}
+                  />
+                  <Bar dataKey="trajets" fill="var(--info)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="page-section" aria-label="Comparatif jour et nuit">
+        <div className="panel">
+          <div className="panel-head">
+            <h3 className="panel-title" id="comparatif-heading">
+              Comparatif Jour vs Nuit
+            </h3>
+            <Badge tone="neutral">GET /stats/comparatif-jour-nuit</Badge>
+          </div>
+          <table className="table" aria-labelledby="comparatif-heading">
+            <thead>
+              <tr>
+                <th scope="col">Indicateur</th>
+                <th scope="col" className="num" style={{ color: 'var(--accent)' }}>
+                  <span aria-hidden="true">☼</span> Jour
+                </th>
+                <th scope="col" className="num" style={{ color: '#6FA3DB' }}>
+                  <span aria-hidden="true">☾</span> Nuit
+                </th>
+                <th scope="col">Unité</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(cmp?.indicateurs ?? []).map((ind) => (
+                <tr key={ind.label}>
+                  <td>{ind.label}</td>
+                  <td className="num">{ind.jour}</td>
+                  <td className="num">{ind.nuit}</td>
+                  <td>{ind.unite || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

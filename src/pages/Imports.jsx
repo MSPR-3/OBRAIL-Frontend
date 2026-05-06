@@ -129,33 +129,52 @@ export default function Imports() {
               color: 'var(--text-secondary)',
               fontWeight: 600,
             }}
+            id="imports-heading"
           >
             Historique ({filtered.length})
           </div>
-          <div className="segmented">
-            <button data-active={filter === ''} onClick={() => setFilter('')}>
+          <div className="segmented" role="group" aria-labelledby="imports-heading">
+            <button
+              data-active={filter === ''}
+              onClick={() => setFilter('')}
+              aria-pressed={filter === ''}
+            >
               Tout
             </button>
-            <button data-active={filter === 'succès'} onClick={() => setFilter('succès')}>
+            <button
+              data-active={filter === 'succès'}
+              onClick={() => setFilter('succès')}
+              aria-pressed={filter === 'succès'}
+            >
               Succès
             </button>
-            <button data-active={filter === 'partiel'} onClick={() => setFilter('partiel')}>
+            <button
+              data-active={filter === 'partiel'}
+              onClick={() => setFilter('partiel')}
+              aria-pressed={filter === 'partiel'}
+            >
               Partiel
             </button>
-            <button data-active={filter === 'échec'} onClick={() => setFilter('échec')}>
+            <button
+              data-active={filter === 'échec'}
+              onClick={() => setFilter('échec')}
+              aria-pressed={filter === 'échec'}
+            >
               Échec
             </button>
           </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table className="table">
+          <table className="table" aria-label="Historique des imports de données">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Date import</th>
-                <th className="num">Lignes importées</th>
-                <th>Statut</th>
-                <th>Message</th>
+                <th scope="col">ID</th>
+                <th scope="col">Date import</th>
+                <th scope="col" className="num">
+                  Lignes importées
+                </th>
+                <th scope="col">Statut</th>
+                <th scope="col">Message</th>
               </tr>
             </thead>
             <tbody>
@@ -185,12 +204,14 @@ export default function Imports() {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel" aria-label="Schéma de la table historique_import">
         <div className="panel-head">
-          <h3 className="panel-title">Schéma de la table</h3>
+          <h3 className="panel-title" id="schema-heading">
+            Schéma de la table
+          </h3>
           <Badge tone="neutral">historique_import</Badge>
         </div>
-        <pre className="code-block">
+        <pre className="code-block" aria-labelledby="schema-heading">
           {`id_import           integer       PK
 date_import         timestamp     without time zone
 nb_lignes_importees integer

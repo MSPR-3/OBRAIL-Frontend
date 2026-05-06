@@ -56,7 +56,7 @@ export default function Dashboard() {
 
   return (
     <div className="page">
-      <section className="page-section">
+      <section className="page-section" aria-label="Indicateurs clés">
         <div className="section-head">
           <h2 className="section-title">Indicateurs clés</h2>
           <span className="section-meta">
@@ -97,7 +97,7 @@ export default function Dashboard() {
 
       <section className="page-section">
         <div className="grid-2-12">
-          <div className="metric-card" data-accent="true">
+          <div className="metric-card" data-accent="true" aria-label="CO₂ moyen par opérateur">
             <div className="metric-head">
               <span>CO₂ par opérateur</span>
               <span className="metric-icon">
@@ -113,6 +113,8 @@ export default function Dashboard() {
                 flexDirection: 'column',
                 gap: 8,
               }}
+              role="list"
+              aria-label="Liste des émissions CO₂ par opérateur"
             >
               <div
                 style={{
@@ -130,10 +132,12 @@ export default function Dashboard() {
                 <div
                   key={e.id_operateur ?? i}
                   style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}
+                  role="listitem"
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span
                       style={{ width: 8, height: 8, borderRadius: 2, background: opColor(i) }}
+                      aria-hidden="true"
                     />
                     {e.nom ?? '—'}
                   </span>
@@ -145,7 +149,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="chart-card">
+          <div
+            className="chart-card"
+            aria-label="Graphique du volume de trajets par opérateur"
+            role="img"
+          >
             <div className="chart-card-head">
               <div>
                 <div className="chart-card-title">Volume de trajets par opérateur</div>

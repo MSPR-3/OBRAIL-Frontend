@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { api } from '../api';
 import { Icon, Badge, TypeBadge } from '../components/Layout';
@@ -15,6 +15,7 @@ export default function Trajets() {
   const [paysAFilter, setPaysAFilter] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
+  const searchRef = useRef(null);
 
   const { data: operateurs } = useApi(() => api.operateurs(), []);
   const paysData = useApi(() => api.pays(), []);
@@ -46,9 +47,15 @@ export default function Trajets() {
     setPage(1);
   };
 
+  useEffect(() => {
+    if (searchRef.current) {
+      searchRef.current.focus();
+    }
+  }, []);
+
   return (
     <div className="page">
-      <section className="panel">
+      <section className="panel" aria-label="Filtres des trajets">
         <div
           style={{
             display: 'grid',
@@ -58,7 +65,9 @@ export default function Trajets() {
           }}
         >
           <div className="field">
-            <label className="field-label">Ville départ</label>
+            <label htmlFor="search-depart" className="field-label">
+              Ville départ
+            </label>
             <div style={{ position: 'relative' }}>
               <span
                 style={{
@@ -69,10 +78,13 @@ export default function Trajets() {
                   color: 'var(--text-tertiary)',
                   pointerEvents: 'none',
                 }}
+                aria-hidden="true"
               >
                 <Icon name="search" size={14} />
               </span>
               <input
+                id="search-depart"
+                ref={searchRef}
                 className="input"
                 style={{ paddingLeft: 32 }}
                 placeholder="Paris, Lyon, Berlin…"
@@ -86,8 +98,11 @@ export default function Trajets() {
           </div>
 
           <div className="field">
-            <label className="field-label">Opérateur</label>
+            <label htmlFor="filter-operateur" className="field-label">
+              Opérateur
+            </label>
             <select
+              id="filter-operateur"
               className="select"
               value={opFilter}
               onChange={(e) => {
@@ -105,8 +120,11 @@ export default function Trajets() {
           </div>
 
           <div className="field">
-            <label className="field-label">Pays départ</label>
+            <label htmlFor="filter-pays-depart" className="field-label">
+              Pays départ
+            </label>
             <select
+              id="filter-pays-depart"
               className="select"
               value={paysDFilter}
               onChange={(e) => {
@@ -124,8 +142,11 @@ export default function Trajets() {
           </div>
 
           <div className="field">
-            <label className="field-label">Pays arrivée</label>
+            <label htmlFor="filter-pays-arrivee" className="field-label">
+              Pays arrivée
+            </label>
             <select
+              id="filter-pays-arrivee"
               className="select"
               value={paysAFilter}
               onChange={(e) => {
@@ -142,7 +163,7 @@ export default function Trajets() {
             </select>
           </div>
 
-          <button className="btn" onClick={reset}>
+          <button className="btn" onClick={reset} aria-label="Réinitialiser tous les filtres">
             Réinitialiser
           </button>
         </div>
@@ -157,6 +178,8 @@ export default function Trajets() {
             alignItems: 'center',
             borderBottom: '1px solid var(--border)',
           }}
+          role="status"
+          aria-live="polite"
         >
           <div
             style={{
@@ -175,23 +198,33 @@ export default function Trajets() {
           <Badge tone="neutral">GET /trajets</Badge>
         </div>
 
-        {error && <div style={{ padding: 16, color: 'var(--danger)' }}>Erreur : {error}</div>}
+        {error && (
+          <div style={{ padding: 16, color: 'var(--danger)' }} role="alert">
+            Erreur : {error}
+          </div>
+        )}
 
         <div style={{ overflowX: 'auto' }}>
-          <table className="table">
+          <table className="table" aria-label="Liste des trajets ferroviaires">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Départ</th>
-                <th>Arrivée</th>
-                <th>Heure dép.</th>
-                <th>Heure arr.</th>
-                <th className="num">Durée</th>
-                <th>Type</th>
-                <th>Opérateur</th>
-                <th>Ligne</th>
-                <th className="num">CO₂ (kg)</th>
-                <th></th>
+                <th scope="col">ID</th>
+                <th scope="col">Départ</th>
+                <th scope="col">Arrivée</th>
+                <th scope="col">Heure dép.</th>
+                <th scope="col">Heure arr.</th>
+                <th scope="col" className="num">
+                  Durée
+                </th>
+                <th scope="col">Type</th>
+                <th scope="col">Opérateur</th>
+                <th scope="col">Ligne</th>
+                <th scope="col" className="num">
+                  CO₂ (kg)
+                </th>
+                <th scope="col">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -240,7 +273,12 @@ export default function Trajets() {
                     {Number(t.emission_co2_kg ?? 0).toFixed(2)}
                   </td>
                   <td>
-                    <button className="btn" data-size="sm" onClick={() => setSelected(t)}>
+                    <button
+                      className="btn"
+                      data-size="sm"
+                      onClick={() => setSelected(t)}
+                      aria-label={`Voir les détails du trajet ${t.id_trajet}`}
+                    >
                       Détails ›
                     </button>
                   </td>
@@ -268,12 +306,46 @@ export default function Trajets() {
 
 function TrajetDrawer({ trajet, onClose }) {
   const open = !!trajet;
+  const drawerRef = useRef(null);
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (open && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (!open) return;
+      if (e.key === 'Escape') {
+        onClose();
+      }
+      if (e.key === 'Tab') {
+        const focusable = drawerRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (!focusable || focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   if (!trajet) {
     return (
       <>
-        <div className="drawer-overlay" data-open={false} onClick={onClose} aria-hidden />
-        <aside className="drawer" data-open={false} aria-hidden />
+        <div className="drawer-overlay" data-open={false} onClick={onClose} aria-hidden="true" />
+        <aside className="drawer" data-open={false} aria-hidden="true" />
       </>
     );
   }
@@ -281,7 +353,14 @@ function TrajetDrawer({ trajet, onClose }) {
   return (
     <>
       <div className="drawer-overlay" data-open={open} onClick={onClose} />
-      <aside className="drawer" data-open={open} role="dialog" aria-modal="true">
+      <aside
+        className="drawer"
+        data-open={open}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Détails du trajet ${trajet.id_trajet}`}
+        ref={drawerRef}
+      >
         <div className="drawer-head">
           <div>
             <div
@@ -302,7 +381,10 @@ function TrajetDrawer({ trajet, onClose }) {
                 fontWeight: 600,
               }}
             >
-              {trajet.depart?.ville} <span style={{ color: 'var(--accent)' }}>→</span>{' '}
+              {trajet.depart?.ville}{' '}
+              <span style={{ color: 'var(--accent)' }} aria-hidden="true">
+                →
+              </span>{' '}
               {trajet.arrivee?.ville}
             </h2>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -310,7 +392,12 @@ function TrajetDrawer({ trajet, onClose }) {
               <Badge tone="neutral">{trajet.ligne?.nom_ligne}</Badge>
             </div>
           </div>
-          <button className="drawer-close" onClick={onClose} aria-label="Fermer">
+          <button
+            ref={closeButtonRef}
+            className="drawer-close"
+            onClick={onClose}
+            aria-label="Fermer le panneau de détails"
+          >
             <Icon name="close" size={16} />
           </button>
         </div>
