@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import { setupApiMocks } from './mocks.js';
 
 test.describe('Dashboard', () => {

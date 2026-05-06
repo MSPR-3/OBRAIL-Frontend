@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import { setupApiMocks } from './mocks.js';
 
 test.describe('Trajets', () => {
@@ -18,12 +19,14 @@ test.describe('Trajets', () => {
     await expect(page.getByText('Bruxelles-Midi')).toBeVisible();
     // ville is displayed in a sub-div inside the same <td>
     await expect(page.locator('td').filter({ hasText: 'Gare du Nord' })).toContainText('Paris');
-    await expect(page.locator('td').filter({ hasText: 'Bruxelles-Midi' })).toContainText('Bruxelles');
+    await expect(page.locator('td').filter({ hasText: 'Bruxelles-Midi' })).toContainText(
+      'Bruxelles',
+    );
   });
-  
-test('affiche le nom opérateur depuis la structure nested', async ({ page }) => {
-  await expect(page.getByRole('cell', { name: 'Thalys', exact: true })).toBeVisible();
-});
+
+  test('affiche le nom opérateur depuis la structure nested', async ({ page }) => {
+    await expect(page.getByRole('cell', { name: 'Thalys', exact: true })).toBeVisible();
+  });
 
   test('affiche la ligne depuis la structure nested', async ({ page }) => {
     await expect(page.getByText('Thalys Paris-Bruxelles')).toBeVisible();
@@ -36,12 +39,14 @@ test('affiche le nom opérateur depuis la structure nested', async ({ page }) =>
     await expect(page.getByRole('columnheader', { name: 'Opérateur' })).toBeVisible();
   });
 
-test('filtre pays départ est populé depuis /pays', async ({ page }) => {
-  const selects = page.locator('select');
-  await expect(selects).toHaveCount(4);
-  const paysSelect = page.locator('select').nth(2);
-  await expect(paysSelect.locator('option', { hasText: 'France' })).toBeAttached({ timeout: 10000 });
-});
+  test('filtre pays départ est populé depuis /pays', async ({ page }) => {
+    const selects = page.locator('select');
+    await expect(selects).toHaveCount(4);
+    const paysSelect = page.locator('select').nth(2);
+    await expect(paysSelect.locator('option', { hasText: 'France' })).toBeAttached({
+      timeout: 10000,
+    });
+  });
 
   test('bouton Détails ouvre le drawer', async ({ page }) => {
     const btn = page.getByRole('button', { name: /Détails/ }).first();

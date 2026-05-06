@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Sidebar, Header } from './components/Layout';
+
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakColor } from './TweaksPanel';
-import Dashboard from './pages/Dashboard';
-import Trajets from './pages/Trajets';
-import Statistiques from './pages/Statistiques';
-import Imports from './pages/Imports';
-import Documentation from './pages/Documentation';
 import { api } from './api'; // Ajoute cet import !
+import { Sidebar, Header } from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import Documentation from './pages/Documentation';
+import Imports from './pages/Imports';
+import Statistiques from './pages/Statistiques';
+import Trajets from './pages/Trajets';
 
 const PAGE_META = {
-  '/':              { title: 'Tableau de bord',          breadcrumb: ['Tableau de bord'] },
-  '/trajets':       { title: 'Trajets',                  breadcrumb: ['Trajets'] },
-  '/statistiques':  { title: 'Statistiques',             breadcrumb: ['Statistiques'] },
-  '/imports':       { title: 'Historique des imports',   breadcrumb: ['Imports'] },
-  '/documentation': { title: 'Documentation API',        breadcrumb: ['API', 'Documentation'] },
+  '/': { title: 'Tableau de bord', breadcrumb: ['Tableau de bord'] },
+  '/trajets': { title: 'Trajets', breadcrumb: ['Trajets'] },
+  '/statistiques': { title: 'Statistiques', breadcrumb: ['Statistiques'] },
+  '/imports': { title: 'Historique des imports', breadcrumb: ['Imports'] },
+  '/documentation': { title: 'Documentation API', breadcrumb: ['API', 'Documentation'] },
 };
 
 function getRoute() {
@@ -50,7 +51,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    function onHash() { setRoute(getRoute()); window.scrollTo(0, 0); }
+    function onHash() {
+      setRoute(getRoute());
+      window.scrollTo(0, 0);
+    }
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -62,7 +66,10 @@ export default function App() {
     document.documentElement.style.setProperty('--density', map[tweaks.density] || 1);
   }, [tweaks]);
 
-  function navigate(id) { window.location.hash = id; setRoute(id); }
+  function navigate(id) {
+    window.location.hash = id;
+    setRoute(id);
+  }
 
   const meta = PAGE_META[route];
 
@@ -76,7 +83,10 @@ export default function App() {
   const Page = pages[route] || Dashboard;
 
   return (
-    <div className="app-shell" data-sidebar={tweaks.sidebar === 'collapsed' ? 'collapsed' : 'expanded'}>
+    <div
+      className="app-shell"
+      data-sidebar={tweaks.sidebar === 'collapsed' ? 'collapsed' : 'expanded'}
+    >
       <Sidebar route={route} onNavigate={navigate} apiOk={apiOk} />
       <main>
         <Header title={meta.title} breadcrumb={meta.breadcrumb} />
@@ -87,15 +97,41 @@ export default function App() {
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="Apparence">
-          <TweakRadio label="Thème" value={tweaks.theme} onChange={v => setTweak('theme', v)}
-            options={[{ value: 'night', label: 'Nuit' }, { value: 'day', label: 'Jour' }]} />
-          <TweakColor label="Accent" value={tweaks.accent} onChange={v => setTweak('accent', v)} />
+          <TweakRadio
+            label="Thème"
+            value={tweaks.theme}
+            onChange={(v) => setTweak('theme', v)}
+            options={[
+              { value: 'night', label: 'Nuit' },
+              { value: 'day', label: 'Jour' },
+            ]}
+          />
+          <TweakColor
+            label="Accent"
+            value={tweaks.accent}
+            onChange={(v) => setTweak('accent', v)}
+          />
         </TweakSection>
         <TweakSection label="Mise en page">
-          <TweakRadio label="Sidebar" value={tweaks.sidebar} onChange={v => setTweak('sidebar', v)}
-            options={[{ value: 'expanded', label: 'Étendue' }, { value: 'collapsed', label: 'Icônes' }]} />
-          <TweakRadio label="Densité" value={tweaks.density} onChange={v => setTweak('density', v)}
-            options={[{ value: 'compact', label: 'Compact' }, { value: 'comfortable', label: 'Confort' }, { value: 'airy', label: 'Aéré' }]} />
+          <TweakRadio
+            label="Sidebar"
+            value={tweaks.sidebar}
+            onChange={(v) => setTweak('sidebar', v)}
+            options={[
+              { value: 'expanded', label: 'Étendue' },
+              { value: 'collapsed', label: 'Icônes' },
+            ]}
+          />
+          <TweakRadio
+            label="Densité"
+            value={tweaks.density}
+            onChange={(v) => setTweak('density', v)}
+            options={[
+              { value: 'compact', label: 'Compact' },
+              { value: 'comfortable', label: 'Confort' },
+              { value: 'airy', label: 'Aéré' },
+            ]}
+          />
         </TweakSection>
       </TweaksPanel>
     </div>
