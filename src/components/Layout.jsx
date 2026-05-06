@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { api } from '../api';
 
 export function Icon({ name, size = 18 }) {
   const props = {
@@ -40,6 +41,33 @@ export const NAV = [
   { id: '/documentation', label: 'Documentation API',   icon: 'doc' },
 ];
 
+// COMPOSANT LAYOUT PRINCIPAL
+export function Layout({ route, onNavigate, children }) {
+  const [apiOk, setApiOk] = useState(true);
+
+  useEffect(() => {
+    const checkApi = async () => {
+      try {
+        await api.health();
+        setApiOk(true);
+      } catch {
+        setApiOk(false);
+      }
+    };
+    checkApi(); // Premier check au montage
+    const interval = setInterval(checkApi, 30000); // Puis toutes les 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="app-shell">
+      <Sidebar route={route} onNavigate={onNavigate} apiOk={apiOk} />
+      <main>{children}</main>
+    </div>
+  );
+}
+
+// SIDEBAR : reçoit apiOk en prop, N’APPELLE PAS L’API
 export function Sidebar({ route, onNavigate, apiOk }) {
   const now = new Date();
   const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -54,7 +82,6 @@ export function Sidebar({ route, onNavigate, apiOk }) {
           <small>Europe / Observatoire</small>
         </div>
       </div>
-
       <div className="sidebar-section-label">Navigation</div>
       <div className="sidebar-nav">
         {NAV.map(item => (
@@ -71,7 +98,6 @@ export function Sidebar({ route, onNavigate, apiOk }) {
           </button>
         ))}
       </div>
-
       <div className="sidebar-status" role="status" aria-live="polite">
         <div className="sidebar-status-row">
           <span className="pulse-dot" data-state={apiOk ? 'ok' : 'error'} aria-hidden="true" />
@@ -85,6 +111,7 @@ export function Sidebar({ route, onNavigate, apiOk }) {
   );
 }
 
+// AUTRES COMPOSANTS UNIQUEMENT POUR RÉFÉRENCE. PAS MODIFIÉS.
 export function Header({ title, breadcrumb }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
