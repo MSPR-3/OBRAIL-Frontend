@@ -6,6 +6,7 @@ import Trajets from './pages/Trajets';
 import Statistiques from './pages/Statistiques';
 import Imports from './pages/Imports';
 import Documentation from './pages/Documentation';
+import { api } from './api'; // Ajoute cet import !
 
 const PAGE_META = {
   '/':              { title: 'Tableau de bord',          breadcrumb: ['Tableau de bord'] },
@@ -29,8 +30,24 @@ const TWEAK_DEFAULTS = {
 
 export default function App() {
   const [route, setRoute] = useState(getRoute());
-  const [apiOk] = useState(true);
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  // Correction : vérification réelle de l'API ici
+  const [apiOk, setApiOk] = useState(true);
+
+  useEffect(() => {
+    async function checkApi() {
+      try {
+        await api.health(); // Va dans src/api.js
+        setApiOk(true);
+      } catch {
+        setApiOk(false);
+      }
+    }
+    checkApi();
+    const interval = setInterval(checkApi, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     function onHash() { setRoute(getRoute()); window.scrollTo(0, 0); }
