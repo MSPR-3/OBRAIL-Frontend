@@ -8,15 +8,15 @@ test.describe('Dashboard', () => {
   });
 
   test('affiche les indicateurs KPI', async ({ page }) => {
-    await expect(page.getByText('1 250')).toBeVisible();
+    await expect(page.getByText('1 250', { exact: true })).toBeVisible();
     await expect(page.getByText('Total trajets')).toBeVisible();
-    await expect(page.getByText('5')).toBeVisible();
+    await expect(page.getByText('5', { exact: true })).toBeVisible();
     await expect(page.getByText('Opérateurs')).toBeVisible();
   });
 
   test('affiche le CO₂ total depuis /stats/kpi', async ({ page }) => {
     await expect(page.getByText(/CO₂ total/)).toBeVisible();
-    await expect(page.getByText(/3\s*145/)).toBeVisible();
+    await expect(page.getByText('3 145', { exact: false })).toBeVisible();
   });
 
   test('affiche la liste des 3 derniers imports', async ({ page }) => {
@@ -28,3 +28,5 @@ test.describe('Dashboard', () => {
     await expect(page.getByText('Volume de trajets par opérateur')).toBeVisible();
   });
 });
+
+

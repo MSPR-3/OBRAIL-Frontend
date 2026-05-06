@@ -13,21 +13,27 @@ test.describe('Navigation et santé app', () => {
 
   test('navigation vers Trajets', async ({ page }) => {
     await page.goto('/');
-    const nav = page.getByRole('link', { name: /trajets/i });
+    await page.waitForSelector('text=Trajets');
+    const nav = page.getByRole('button', { name: /trajets/i });
+    await expect(nav).toBeVisible();
     await nav.click();
     await expect(page).toHaveURL(/trajets/);
   });
 
   test('navigation vers Imports', async ({ page }) => {
     await page.goto('/');
-    const nav = page.getByRole('link', { name: /imports/i });
+    await page.waitForSelector('text=Imports');
+    const nav = page.getByRole('button', { name: /imports/i });
+    await expect(nav).toBeVisible();
     await nav.click();
     await expect(page).toHaveURL(/imports/);
   });
 
   test('navigation vers Statistiques', async ({ page }) => {
     await page.goto('/');
-    const nav = page.getByRole('link', { name: /statistiques/i });
+    await page.waitForSelector('text=Statistiques');
+    const nav = page.getByRole('button', { name: /statistiques/i });
+    await expect(nav).toBeVisible();
     await nav.click();
     await expect(page).toHaveURL(/statistiques/);
   });
