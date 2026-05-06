@@ -7,5 +7,4 @@ coverage
 .vscode
 *.log
 *.tsbuildinfo
-package-lock.json
 yarn.lock
