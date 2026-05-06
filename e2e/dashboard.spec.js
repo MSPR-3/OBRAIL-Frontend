@@ -16,7 +16,8 @@ test.describe('Dashboard', () => {
 
   test('affiche le CO₂ total depuis /stats/kpi', async ({ page }) => {
     await expect(page.getByText(/CO₂ total/)).toBeVisible();
-    await expect(page.getByText('3 145', { exact: false })).toBeVisible();
+    // fr-FR locale uses narrow no-break space (\u202f) as thousands separator
+    await expect(page.getByText(/3.?145/)).toBeVisible();
   });
 
   test('affiche la liste des 3 derniers imports', async ({ page }) => {
@@ -28,5 +29,3 @@ test.describe('Dashboard', () => {
     await expect(page.getByText('Volume de trajets par opérateur')).toBeVisible();
   });
 });
-
-

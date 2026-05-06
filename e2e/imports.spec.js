@@ -4,7 +4,7 @@ import { setupApiMocks } from './mocks.js';
 test.describe('Imports', () => {
   test.beforeEach(async ({ page }) => {
     await setupApiMocks(page);
-    await page.goto('/imports');
+    await page.goto('/#/imports');
   });
 
   test('affiche le banner du dernier import', async ({ page }) => {
@@ -17,7 +17,7 @@ test.describe('Imports', () => {
     await expect(page.getByText('Échoués')).toBeVisible();
   });
 
-  test('affiche l\'historique depuis /imports', async ({ page }) => {
+  test("affiche l'historique depuis /imports", async ({ page }) => {
     await expect(page.getByRole('table')).toBeVisible();
     await expect(page.getByText('#3')).toBeVisible();
     await expect(page.getByText('Import complet')).toBeVisible();
