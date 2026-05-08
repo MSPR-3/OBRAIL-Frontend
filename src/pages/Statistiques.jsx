@@ -87,7 +87,7 @@ export default function Statistiques() {
           />
           <MetricCard
             label="CO₂ moyen / trajet"
-            value={`${co2Moy} kg`}
+            value={`${Number(co2Moy).toFixed(5)} kg`}
             sub="emission_co2_kg"
             icon="leaf"
           />
@@ -345,92 +345,6 @@ export default function Statistiques() {
         </div>
       </section>
 
-      <section className="page-section">
-        <div className="grid-2">
-          <div className="chart-card">
-            <div className="chart-card-head">
-              <div>
-                <div className="chart-card-title">Top 10 lignes</div>
-                <div className="chart-card-sub">GET /stats/volumes?groupby=ligne</div>
-              </div>
-            </div>
-            <div style={{ height: 280 }}>
-              <ResponsiveContainer>
-                <BarChart
-                  data={topLignes}
-                  layout="vertical"
-                  margin={{ top: 5, right: 10, bottom: 5, left: 120 }}
-                >
-                  <CartesianGrid {...GRID_STYLE} horizontal={false} />
-                  <XAxis type="number" {...AXIS_STYLE} />
-                  <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={120} />
-                  <Tooltip
-                    cursor={{ fill: 'var(--bg-elevated)' }}
-                    content={<ChartTooltip unit=" trajets" />}
-                  />
-                  <Bar dataKey="nb_trajets" fill="var(--accent)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="chart-card">
-            <div className="chart-card-head">
-              <div>
-                <div className="chart-card-title">Trajets par pays de départ</div>
-                <div className="chart-card-sub">GET /stats/volumes?groupby=pays_depart</div>
-              </div>
-            </div>
-            <div style={{ height: 280 }}>
-              <ResponsiveContainer>
-                <BarChart data={paysData} margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
-                  <CartesianGrid {...GRID_STYLE} vertical={false} />
-                  <XAxis dataKey="name" {...AXIS_STYLE} />
-                  <YAxis {...AXIS_STYLE} />
-                  <Tooltip
-                    cursor={{ fill: 'var(--bg-elevated)' }}
-                    content={<ChartTooltip unit=" départs" />}
-                  />
-                  <Bar dataKey="trajets" fill="var(--info)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="page-section">
-        <div className="panel">
-          <div className="panel-head">
-            <h3 className="panel-title">Comparatif Jour vs Nuit</h3>
-            <Badge tone="neutral">GET /stats/comparatif-jour-nuit</Badge>
-          </div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Indicateur</th>
-                <th className="num" style={{ color: 'var(--accent)' }}>
-                  ☼ Jour
-                </th>
-                <th className="num" style={{ color: '#6FA3DB' }}>
-                  ☾ Nuit
-                </th>
-                <th>Unité</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(cmp?.indicateurs ?? []).map((ind) => (
-                <tr key={ind.label}>
-                  <td>{ind.label}</td>
-                  <td className="num">{ind.jour}</td>
-                  <td className="num">{ind.nuit}</td>
-                  <td>{ind.unite || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }
