@@ -46,11 +46,13 @@ export default function Dashboard() {
   const co2Total = co2Stats?.co2_total_kg ?? 0;
   const co2Moy = co2Stats?.co2_moyen_kg_par_trajet ?? 0;
 
-  const chartData = (ops?.operateurs ?? []).map((o, i) => ({
-    name: o.nom,
-    trajets: o.nb_trajets,
-    color: opColor(i),
-  }));
+  const chartData = (ops?.operateurs ?? [])
+    .filter((o) => o.nb_trajets > 0)
+    .map((o, i) => ({
+      name: o.nom,
+      trajets: o.nb_trajets,
+      color: opColor(i),
+    }));
 
   const dernier = importsResp?.imports?.[0];
 
@@ -81,7 +83,7 @@ export default function Dashboard() {
           <MetricCard
             label="CO₂ total"
             value={`${co2Total.toLocaleString('fr-FR')} kg`}
-            sub={`${co2Moy} kg / trajet`}
+            sub={`${Number(co2Moy).toFixed(5)} kg / trajet`}
             icon="leaf"
             accent="warning"
           />

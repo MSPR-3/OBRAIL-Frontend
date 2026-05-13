@@ -6,14 +6,13 @@ import { InfoCell, Pagination } from '../components/Shared';
 import { useApi } from '../hooks/useApi';
 import { formatDuree, formatHeure } from '../utils';
 
-const PER_PAGE = 15;
-
 export default function Trajets() {
   const [search, setSearch] = useState('');
   const [opFilter, setOpFilter] = useState('');
   const [paysDFilter, setPaysDFilter] = useState('');
   const [paysAFilter, setPaysAFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
   const [selected, setSelected] = useState(null);
   const searchRef = useRef(null);
 
@@ -22,19 +21,19 @@ export default function Trajets() {
   const pays = paysData?.data?.pays ?? [];
 
   const queryParams = useCallback(() => {
-    const p = { limit: PER_PAGE, page: page };
+    const p = { limit: perPage, page: page };
     if (search) p.search = search;
     if (opFilter) p.id_operateur = opFilter;
     if (paysDFilter) p.code_pays_depart = paysDFilter;
     if (paysAFilter) p.code_pays_arrivee = paysAFilter;
     return p;
-  }, [search, opFilter, paysDFilter, paysAFilter, page]);
+  }, [search, opFilter, paysDFilter, paysAFilter, page, perPage]);
 
   const {
     data: trajets,
     loading,
     error,
-  } = useApi(() => api.trajets(queryParams()), [search, opFilter, paysDFilter, paysAFilter, page]);
+  } = useApi(() => api.trajets(queryParams()), [search, opFilter, paysDFilter, paysAFilter, page, perPage]);
 
   const trajetsList = trajets?.results ?? [];
   const pages = trajets?.total_pages ?? 1;
@@ -45,6 +44,7 @@ export default function Trajets() {
     setPaysDFilter('');
     setPaysAFilter('');
     setPage(1);
+    setPerPage(15);
   };
 
   useEffect(() => {
@@ -232,32 +232,36 @@ export default function Trajets() {
                 <tr key={t.id_trajet}>
                   <td className="id-cell">{t.id_trajet}</td>
                   <td>
-                    <div className="station">{t.depart?.nom}</div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--text-tertiary)',
-                        fontFamily: 'var(--font-mono)',
-                        marginTop: 2,
-                        marginLeft: 14,
-                      }}
-                    >
-                      {t.depart?.ville} · {t.depart?.code_pays}
-                    </div>
+                    <div className="station">{t.depart?.nom ?? '—'}</div>
+                    {(t.depart?.ville || t.depart?.code_pays) && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--text-tertiary)',
+                          fontFamily: 'var(--font-mono)',
+                          marginTop: 2,
+                          marginLeft: 14,
+                        }}
+                      >
+                        {[t.depart?.ville, t.depart?.code_pays].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                   </td>
                   <td>
-                    <div className="station">{t.arrivee?.nom}</div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--text-tertiary)',
-                        fontFamily: 'var(--font-mono)',
-                        marginTop: 2,
-                        marginLeft: 14,
-                      }}
-                    >
-                      {t.arrivee?.ville} · {t.arrivee?.code_pays}
-                    </div>
+                    <div className="station">{t.arrivee?.nom ?? '—'}</div>
+                    {(t.arrivee?.ville || t.arrivee?.code_pays) && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--text-tertiary)',
+                          fontFamily: 'var(--font-mono)',
+                          marginTop: 2,
+                          marginLeft: 14,
+                        }}
+                      >
+                        {[t.arrivee?.ville, t.arrivee?.code_pays].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                   </td>
                   <td className="num">{formatHeure(t.heure_depart)}</td>
                   <td className="num">{formatHeure(t.heure_arrivee)}</td>
@@ -269,7 +273,7 @@ export default function Trajets() {
                   <td>
                     <span className="route-tag">{t.ligne?.nom_ligne}</span>
                   </td>
-                  <td className="num" style={{ color: 'var(--success)', fontWeight: 600 }}>
+                  <td className="num" style={{ color: Number(t.emission_co2_kg ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
                     {Number(t.emission_co2_kg ?? 0).toFixed(2)}
                   </td>
                   <td>
@@ -293,8 +297,8 @@ export default function Trajets() {
             page={page}
             pages={pages}
             onPage={setPage}
-            perPage={PER_PAGE}
-            onPerPage={() => {}}
+            perPage={perPage}
+            onPerPage={(n) => { setPerPage(n); setPage(1); }}
           />
         </div>
       </section>
@@ -381,11 +385,11 @@ function TrajetDrawer({ trajet, onClose }) {
                 fontWeight: 600,
               }}
             >
-              {trajet.depart?.ville}{' '}
+              {trajet.depart?.ville ?? trajet.depart?.nom ?? '—'}{' '}
               <span style={{ color: 'var(--accent)' }} aria-hidden="true">
                 →
               </span>{' '}
-              {trajet.arrivee?.ville}
+              {trajet.arrivee?.ville ?? trajet.arrivee?.nom ?? '—'}
             </h2>
             <div style={{ display: 'flex', gap: 8 }}>
               <TypeBadge type={trajet.type_calcul} />
@@ -408,13 +412,13 @@ function TrajetDrawer({ trajet, onClose }) {
           >
             <InfoCell
               label="Gare départ"
-              value={trajet.depart?.nom}
-              sub={`${trajet.depart?.ville} · ${trajet.depart?.code_pays}`}
+              value={trajet.depart?.nom ?? '—'}
+              sub={[trajet.depart?.ville, trajet.depart?.code_pays].filter(Boolean).join(' · ') || undefined}
             />
             <InfoCell
               label="Gare arrivée"
-              value={trajet.arrivee?.nom}
-              sub={`${trajet.arrivee?.ville} · ${trajet.arrivee?.code_pays}`}
+              value={trajet.arrivee?.nom ?? '—'}
+              sub={[trajet.arrivee?.ville, trajet.arrivee?.code_pays].filter(Boolean).join(' · ') || undefined}
             />
             <InfoCell label="Heure de départ" value={formatHeure(trajet.heure_depart)} />
             <InfoCell label="Heure d'arrivée" value={formatHeure(trajet.heure_arrivee)} />

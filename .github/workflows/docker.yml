@@ -54,3 +54,24 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VITE_API_URL=${{ secrets.VITE_API_URL }}
+
+  # ── CD : déploiement automatique sur env de test (main only) ──
+  deploy-test:
+    name: Deploy → test
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Trigger OBRAIL-Infrastructure deploy
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_DEPLOY_TOKEN }}
+          repository: ${{ github.repository_owner }}/OBRAIL-Infrastructure
+          event-type: deploy-test
+          client-payload: |
+            {
+              "service": "frontend",
+              "sha": "${{ github.sha }}",
+              "ref": "${{ github.ref_name }}"
+            }
