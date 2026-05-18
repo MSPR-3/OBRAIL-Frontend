@@ -229,22 +229,27 @@ export default function Documentation() {
                         <tbody>
                           {ep.params.map(([n, t, r, d]) => (
                             <tr key={n}>
-                              <td>
+                              <td data-label="Nom">
                                 <code className="param-name">
                                   {n}
                                 </code>
                               </td>
-                              <td className="param-type">
+                              <td className="param-type" data-label="Type">
                                 {t}
                               </td>
-                              <td>
+                              <td data-label="Requis">
                                 {r === 'oui' ? (
                                   <Badge tone="warning">requis</Badge>
                                 ) : (
                                   <span style={{ color: 'var(--text-tertiary)' }}>—</span>
                                 )}
                               </td>
-                              <td style={{ color: 'var(--text-secondary)' }}>{d}</td>
+                              <td
+                                data-label="Description"
+                                style={{ color: 'var(--text-secondary)' }}
+                              >
+                                {d}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

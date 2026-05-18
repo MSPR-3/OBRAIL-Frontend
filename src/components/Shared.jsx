@@ -236,24 +236,8 @@ export function Pagination({ page, pages, onPage, perPage, onPerPage }) {
           return [1, '...', page - 1, page, page + 1, '...', pages];
         })();
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 16,
-        flexWrap: 'wrap',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          fontSize: 12,
-          color: 'var(--text-secondary)',
-        }}
-      >
+    <div className="pagination">
+      <div className="pagination-size">
         <span>Lignes par page</span>
         <select
           className="select"
@@ -267,7 +251,7 @@ export function Pagination({ page, pages, onPage, perPage, onPerPage }) {
           <option>50</option>
         </select>
       </div>
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div className="pagination-pages">
         <button
           className="btn"
           data-size="sm"
