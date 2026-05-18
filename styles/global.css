@@ -1952,13 +1952,16 @@ main {
     grid-template-columns: 1fr;
   }
   .top-lines-chart {
-    height: 260px;
+    display: none;
   }
   .top-lines-list {
-    gap: 10px;
+    border-top: 0;
+    padding: 0;
+    gap: 14px;
   }
   .top-lines-name {
     white-space: normal;
+    font-size: 14px;
   }
   .chart-card-head {
     gap: 10px;

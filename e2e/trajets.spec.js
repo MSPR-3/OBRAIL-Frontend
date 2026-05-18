@@ -10,8 +10,10 @@ test.describe('Trajets', () => {
     await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 });
   });
 
-  test('affiche le tableau de trajets', async ({ page }) => {
-    await expect(page.getByText('TJ-001')).toBeVisible();
+  test("affiche le tableau de trajets sans colonne d'identifiant", async ({ page }) => {
+    await expect(page.getByRole('columnheader', { name: 'Départ' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'ID' })).toHaveCount(0);
+    await expect(page.getByRole('cell', { name: 'TJ-001' })).toHaveCount(0);
   });
 
   test('affiche les informations de départ/arrivée nestées', async ({ page }) => {

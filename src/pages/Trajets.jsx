@@ -194,7 +194,6 @@ export default function Trajets() {
             <table className="table" aria-label="Liste des trajets ferroviaires">
               <thead>
                 <tr>
-                  <th scope="col">ID</th>
                   <th scope="col">Départ</th>
                   <th scope="col">Arrivée</th>
                   <th scope="col">Heure dép.</th>
@@ -216,7 +215,6 @@ export default function Trajets() {
               <tbody>
                 {trajetsList.map((t) => (
                   <tr key={t.id_trajet}>
-                    <td className="id-cell">{t.id_trajet}</td>
                     <td>
                       <div className="station">{t.depart?.nom ?? '—'}</div>
                       {(t.depart?.ville || t.depart?.code_pays) && (
@@ -260,7 +258,7 @@ export default function Trajets() {
                         className="btn"
                         data-size="sm"
                         onClick={() => setSelected(t)}
-                        aria-label={`Voir les détails du trajet ${t.id_trajet}`}
+                        aria-label={`Voir les détails du trajet ${t.depart?.ville ?? t.depart?.nom ?? 'départ'} vers ${t.arrivee?.ville ?? t.arrivee?.nom ?? 'arrivée'}`}
                       >
                         Détails ›
                       </button>
@@ -278,7 +276,7 @@ export default function Trajets() {
               <article className="data-card trajet-card" key={t.id_trajet}>
                 <div className="data-card-head">
                   <div>
-                    <div className="data-card-kicker">{t.id_trajet}</div>
+                    <div className="data-card-kicker">{t.operateur?.nom ?? 'Trajet'}</div>
                     <h3 className="data-card-title">
                       {t.depart?.ville ?? t.depart?.nom ?? '—'} →{' '}
                       {t.arrivee?.ville ?? t.arrivee?.nom ?? '—'}
@@ -331,7 +329,7 @@ export default function Trajets() {
                   className="btn"
                   data-size="sm"
                   onClick={() => setSelected(t)}
-                  aria-label={`Voir les détails du trajet ${t.id_trajet}`}
+                  aria-label={`Voir les détails du trajet ${t.depart?.ville ?? t.depart?.nom ?? 'départ'} vers ${t.arrivee?.ville ?? t.arrivee?.nom ?? 'arrivée'}`}
                 >
                   Détails ›
                 </button>
@@ -410,7 +408,7 @@ function TrajetDrawer({ trajet, onClose }) {
         data-open={open}
         role="dialog"
         aria-modal="true"
-        aria-label={`Détails du trajet ${trajet.id_trajet}`}
+        aria-label={`Détails du trajet ${trajet.depart?.ville ?? trajet.depart?.nom ?? 'départ'} vers ${trajet.arrivee?.ville ?? trajet.arrivee?.nom ?? 'arrivée'}`}
         ref={drawerRef}
       >
         <div className="drawer-head">
@@ -423,7 +421,7 @@ function TrajetDrawer({ trajet, onClose }) {
                 letterSpacing: '0.1em',
               }}
             >
-              {trajet.id_trajet}
+              {[trajet.operateur?.nom, trajet.ligne?.nom_ligne].filter(Boolean).join(' · ')}
             </div>
             <h2
               style={{
