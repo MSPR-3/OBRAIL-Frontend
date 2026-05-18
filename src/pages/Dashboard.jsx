@@ -167,7 +167,18 @@ export default function Dashboard() {
                 <BarChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
                   <CartesianGrid {...GRID_STYLE} vertical={false} />
                   <XAxis dataKey="name" {...AXIS_STYLE} />
-                  <YAxis {...AXIS_STYLE} />
+                  <YAxis
+                    {...AXIS_STYLE}
+                    scale="log"
+                    domain={['auto', 'auto']}
+                    label={{
+                      value: 'log',
+                      position: 'insideTopLeft',
+                      offset: 4,
+                      fill: 'var(--text-tertiary)',
+                      fontSize: 9,
+                    }}
+                  />
                   <Tooltip
                     cursor={{ fill: 'var(--bg-elevated)' }}
                     content={<ChartTooltip unit=" trajets" />}
