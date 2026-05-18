@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakColor } from './TweaksPanel';
 import { api } from './api'; // Ajoute cet import !
-import { Sidebar, Header } from './components/Layout';
+import { Sidebar, Header, BottomNav } from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Documentation from './pages/Documentation';
 import Imports from './pages/Imports';
@@ -94,6 +94,7 @@ export default function App() {
           <Page />
         </div>
       </main>
+      <BottomNav route={route} onNavigate={navigate} />
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="Apparence">

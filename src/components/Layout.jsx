@@ -156,11 +156,11 @@ export function Icon({ name, size = 18 }) {
 }
 
 export const NAV = [
-  { id: '/', label: 'Tableau de bord', icon: 'home' },
-  { id: '/trajets', label: 'Trajets', icon: 'train' },
-  { id: '/statistiques', label: 'Statistiques', icon: 'chart' },
-  { id: '/imports', label: 'Imports', icon: 'refresh' },
-  { id: '/documentation', label: 'Documentation API', icon: 'doc' },
+  { id: '/', label: 'Tableau de bord', icon: 'home', mobileLabel: 'Accueil' },
+  { id: '/trajets', label: 'Trajets', icon: 'train', mobileLabel: 'Trajets' },
+  { id: '/statistiques', label: 'Statistiques', icon: 'chart', mobileLabel: 'Stats' },
+  { id: '/imports', label: 'Imports', icon: 'refresh', mobileLabel: 'Imports' },
+  { id: '/documentation', label: 'Documentation API', icon: 'doc', mobileLabel: 'Docs' },
 ];
 
 // COMPOSANT LAYOUT PRINCIPAL
@@ -331,5 +331,25 @@ export function StatutBadge({ statut }) {
 export function TypeBadge({ type }) {
   return (
     <Badge tone={type === 'jour' ? 'day' : 'night'}>{type === 'jour' ? '☼ Jour' : '☾ Nuit'}</Badge>
+  );
+}
+
+export function BottomNav({ route, onNavigate }) {
+  return (
+    <nav className="bottom-nav" aria-label="Navigation principale">
+      {NAV.map((item) => (
+        <button
+          key={item.id}
+          className="bottom-nav-link"
+          data-active={route === item.id}
+          onClick={() => onNavigate(item.id)}
+          aria-current={route === item.id ? 'page' : undefined}
+          aria-label={item.label}
+        >
+          <Icon name={item.icon} size={20} />
+          <span>{item.mobileLabel}</span>
+        </button>
+      ))}
+    </nav>
   );
 }
