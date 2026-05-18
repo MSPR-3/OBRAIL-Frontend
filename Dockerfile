@@ -6,6 +6,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+# Force cache bust on each Railway deployment (SHA change = new layer)
+ARG RAILWAY_GIT_COMMIT_SHA
 COPY . .
 ARG VITE_API_URL=/api
 RUN npm run build
