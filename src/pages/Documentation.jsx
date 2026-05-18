@@ -159,93 +159,34 @@ export default function Documentation() {
   return (
     <div className="page">
       <section className="panel">
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 32 }}>
+        <div className="doc-hero">
           <div>
-            <div
-              style={{
-                fontSize: 11,
-                fontFamily: 'var(--font-display)',
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: 'var(--text-tertiary)',
-                fontWeight: 600,
-                marginBottom: 8,
-              }}
-            >
+            <div className="doc-kicker">
               API REST · v1.0
             </div>
-            <h2
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 28,
-                fontWeight: 600,
-                margin: '0 0 12px',
-              }}
-            >
+            <h2 className="doc-title">
               Documentation des endpoints
             </h2>
-            <p style={{ color: 'var(--text-secondary)', margin: 0, maxWidth: 640 }}>
+            <p className="doc-intro">
               API alignée sur le schéma de base : <code>trajet</code>, <code>ligne</code>,{' '}
               <code>operateur</code>, <code>gare</code>, <code>localisation</code>,{' '}
               <code>historique_import</code>. 14 endpoints au total, format JSON UTF-8.
             </p>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div
-              style={{
-                padding: '10px 12px',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 10,
-                  fontFamily: 'var(--font-display)',
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-tertiary)',
-                  fontWeight: 600,
-                  marginBottom: 4,
-                }}
-              >
+          <div className="doc-meta-stack">
+            <div className="doc-meta-card">
+              <div className="doc-meta-label">
                 Base URL
               </div>
-              <code
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent)' }}
-              >
+              <code className="doc-meta-code" data-accent="true">
                 http://api.obrail-europe.eu/v1
               </code>
             </div>
-            <div
-              style={{
-                padding: '10px 12px',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 10,
-                  fontFamily: 'var(--font-display)',
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-tertiary)',
-                  fontWeight: 600,
-                  marginBottom: 4,
-                }}
-              >
+            <div className="doc-meta-card">
+              <div className="doc-meta-label">
                 Authentification
               </div>
-              <code
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 11,
-                  color: 'var(--text-primary)',
-                }}
-              >
+              <code className="doc-meta-code">
                 Authorization: Bearer &lt;token&gt;
               </code>
             </div>
@@ -258,10 +199,10 @@ export default function Documentation() {
           <div key={ep.id} className="accordion" data-open={!!open[ep.id]}>
             <button className="accordion-head" onClick={() => toggle(ep.id)}>
               <Badge tone="success">{ep.method}</Badge>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 500 }}>
+              <span className="accordion-route">
                 {ep.path}
               </span>
-              <span style={{ color: 'var(--text-tertiary)', fontSize: 12, marginLeft: 12 }}>
+              <span className="accordion-desc">
                 {ep.desc}
               </span>
               <span className="chevron">
@@ -272,75 +213,46 @@ export default function Documentation() {
               <div className="accordion-body-inner">
                 {ep.params.length > 0 && (
                   <>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontFamily: 'var(--font-display)',
-                        letterSpacing: '0.16em',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-tertiary)',
-                        fontWeight: 600,
-                        margin: '12px 0 8px',
-                      }}
-                    >
+                    <div className="section-kicker">
                       Paramètres
                     </div>
-                    <table className="table" style={{ marginBottom: 16 }}>
-                      <thead>
-                        <tr>
-                          <th>Nom</th>
-                          <th>Type</th>
-                          <th>Requis</th>
-                          <th>Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ep.params.map(([n, t, r, d]) => (
-                          <tr key={n}>
-                            <td>
-                              <code
-                                style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}
-                              >
-                                {n}
-                              </code>
-                            </td>
-                            <td
-                              style={{
-                                color: 'var(--text-secondary)',
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: 12,
-                              }}
-                            >
-                              {t}
-                            </td>
-                            <td>
-                              {r === 'oui' ? (
-                                <Badge tone="warning">requis</Badge>
-                              ) : (
-                                <span style={{ color: 'var(--text-tertiary)' }}>—</span>
-                              )}
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)' }}>{d}</td>
+                    <div className="table-responsive doc-param-table">
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Nom</th>
+                            <th>Type</th>
+                            <th>Requis</th>
+                            <th>Description</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {ep.params.map(([n, t, r, d]) => (
+                            <tr key={n}>
+                              <td>
+                                <code className="param-name">
+                                  {n}
+                                </code>
+                              </td>
+                              <td className="param-type">
+                                {t}
+                              </td>
+                              <td>
+                                {r === 'oui' ? (
+                                  <Badge tone="warning">requis</Badge>
+                                ) : (
+                                  <span style={{ color: 'var(--text-tertiary)' }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ color: 'var(--text-secondary)' }}>{d}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </>
                 )}
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontFamily: 'var(--font-display)',
-                    letterSpacing: '0.16em',
-                    textTransform: 'uppercase',
-                    color: 'var(--text-tertiary)',
-                    fontWeight: 600,
-                    margin: '12px 0 8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
+                <div className="section-kicker section-kicker-row">
                   <span>Exemple de réponse</span>
                   <Badge tone="success">200 OK</Badge>
                 </div>
@@ -356,58 +268,60 @@ export default function Documentation() {
           <h3 className="panel-title">Codes HTTP</h3>
           <Badge tone="neutral">référence</Badge>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Cas</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <Badge tone="success">200</Badge>
-              </td>
-              <td>Succès</td>
-            </tr>
-            <tr>
-              <td>
-                <Badge tone="warning">400</Badge>
-              </td>
-              <td>Requête malformée</td>
-            </tr>
-            <tr>
-              <td>
-                <Badge tone="warning">401</Badge>
-              </td>
-              <td>Token manquant ou invalide</td>
-            </tr>
-            <tr>
-              <td>
-                <Badge tone="danger">404</Badge>
-              </td>
-              <td>Ressource inexistante</td>
-            </tr>
-            <tr>
-              <td>
-                <Badge tone="warning">422</Badge>
-              </td>
-              <td>Paramètre hors plage</td>
-            </tr>
-            <tr>
-              <td>
-                <Badge tone="danger">429</Badge>
-              </td>
-              <td>Rate limit dépassé</td>
-            </tr>
-            <tr>
-              <td>
-                <Badge tone="danger">500</Badge>
-              </td>
-              <td>Erreur serveur</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="table-responsive">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Cas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <Badge tone="success">200</Badge>
+                </td>
+                <td>Succès</td>
+              </tr>
+              <tr>
+                <td>
+                  <Badge tone="warning">400</Badge>
+                </td>
+                <td>Requête malformée</td>
+              </tr>
+              <tr>
+                <td>
+                  <Badge tone="warning">401</Badge>
+                </td>
+                <td>Token manquant ou invalide</td>
+              </tr>
+              <tr>
+                <td>
+                  <Badge tone="danger">404</Badge>
+                </td>
+                <td>Ressource inexistante</td>
+              </tr>
+              <tr>
+                <td>
+                  <Badge tone="warning">422</Badge>
+                </td>
+                <td>Paramètre hors plage</td>
+              </tr>
+              <tr>
+                <td>
+                  <Badge tone="danger">429</Badge>
+                </td>
+                <td>Rate limit dépassé</td>
+              </tr>
+              <tr>
+                <td>
+                  <Badge tone="danger">500</Badge>
+                </td>
+                <td>Erreur serveur</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

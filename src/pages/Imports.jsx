@@ -1,13 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { api } from '../api';
 import { MetricCard, Badge } from '../components/Layout';
 import { useApi } from '../hooks/useApi';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    window.matchMedia('(max-width: 768px)').matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return isMobile;
+}
+
 export default function Imports() {
   const [filter, setFilter] = useState('');
   const { data: all, loading: l1, error } = useApi(() => api.imports({ limit: 100 }), []);
   const { data: stats, loading: l2 } = useApi(() => api.importsStats(), []);
+  const isMobile = useIsMobile();
 
   const loading = l1 || l2;
 
@@ -54,13 +71,7 @@ export default function Imports() {
                 : 'Anomalie sur le dernier import'}
             </div>
             <div
-              style={{
-                display: 'flex',
-                gap: 24,
-                fontSize: 12,
-                color: 'var(--text-secondary)',
-                fontFamily: 'var(--font-mono)',
-              }}
+              className="status-banner-meta"
             >
               <span>{new Date(dernier.date_import).toLocaleString('fr-FR')}</span>
               <span>{dernier.nb_lignes_importees.toLocaleString('fr-FR')} lignes</span>
@@ -109,28 +120,9 @@ export default function Imports() {
         </div>
       </section>
 
-      <section className="panel" style={{ padding: 0 }}>
-        <div
-          style={{
-            padding: '14px 24px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid var(--border)',
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 13,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-            }}
-            id="imports-heading"
-          >
+      <section className="panel table-panel">
+        <div className="panel-toolbar">
+          <div className="panel-eyebrow" id="imports-heading">
             Historique ({filtered.length})
           </div>
           <div className="segmented" role="group" aria-labelledby="imports-heading">
@@ -164,44 +156,84 @@ export default function Imports() {
             </button>
           </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table" aria-label="Historique des imports de données">
-            <thead>
-              <tr>
-                <th scope="col">ID</th>
-                <th scope="col">Date import</th>
-                <th scope="col" className="num">
-                  Lignes importées
-                </th>
-                <th scope="col">Statut</th>
-                <th scope="col">Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((i) => (
-                <tr key={i.id_import}>
-                  <td className="id-cell">#{i.id_import}</td>
-                  <td className="num">{new Date(i.date_import).toLocaleString('fr-FR')}</td>
-                  <td className="num">{i.nb_lignes_importees.toLocaleString('fr-FR')}</td>
-                  <td>
-                    <Badge
-                      tone={
-                        i.statut === 'succès'
-                          ? 'success'
-                          : i.statut === 'échec'
-                            ? 'danger'
-                            : 'warning'
-                      }
-                    >
-                      {i.statut}
-                    </Badge>
-                  </td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{i.message}</td>
+        {!isMobile && (
+          <div className="table-responsive desktop-table">
+            <table className="table" aria-label="Historique des imports de données">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Date import</th>
+                  <th scope="col" className="num">
+                    Lignes importées
+                  </th>
+                  <th scope="col">Statut</th>
+                  <th scope="col">Message</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((i) => (
+                  <tr key={i.id_import}>
+                    <td className="id-cell">#{i.id_import}</td>
+                    <td className="num">{new Date(i.date_import).toLocaleString('fr-FR')}</td>
+                    <td className="num">{i.nb_lignes_importees.toLocaleString('fr-FR')}</td>
+                    <td>
+                      <Badge
+                        tone={
+                          i.statut === 'succès'
+                            ? 'success'
+                            : i.statut === 'échec'
+                              ? 'danger'
+                              : 'warning'
+                        }
+                      >
+                        {i.statut}
+                      </Badge>
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{i.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {isMobile && (
+          <div className="mobile-card-list" aria-label="Historique mobile des imports">
+            {filtered.map((i) => (
+              <article className="data-card import-card" key={i.id_import}>
+                <div className="data-card-head">
+                  <div>
+                    <div className="data-card-kicker">Import #{i.id_import}</div>
+                    <h3 className="data-card-title">
+                      {new Date(i.date_import).toLocaleString('fr-FR')}
+                    </h3>
+                  </div>
+                  <Badge
+                    tone={
+                      i.statut === 'succès'
+                        ? 'success'
+                        : i.statut === 'échec'
+                          ? 'danger'
+                          : 'warning'
+                    }
+                  >
+                    {i.statut}
+                  </Badge>
+                </div>
+                <div className="data-card-grid">
+                  <div>
+                    <span>Lignes</span>
+                    <strong>{i.nb_lignes_importees.toLocaleString('fr-FR')}</strong>
+                  </div>
+                  <div>
+                    <span>Statut</span>
+                    <strong>{i.statut}</strong>
+                  </div>
+                </div>
+                <p className="data-card-message">{i.message}</p>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="panel" aria-label="Schéma de la table historique_import">
@@ -211,13 +243,33 @@ export default function Imports() {
           </h3>
           <Badge tone="neutral">historique_import</Badge>
         </div>
-        <pre className="code-block" aria-labelledby="schema-heading">
-          {`id_import           integer       PK
-date_import         timestamp     without time zone
-nb_lignes_importees integer
-statut              varchar(20)   succès | échec | partiel
-message             text`}
-        </pre>
+        <div className="schema-grid" aria-labelledby="schema-heading">
+          <div className="schema-field" data-key="PK">
+            <span>id_import</span>
+            <strong>integer</strong>
+            <small>Clé primaire</small>
+          </div>
+          <div className="schema-field">
+            <span>date_import</span>
+            <strong>timestamp</strong>
+            <small>Sans fuseau horaire</small>
+          </div>
+          <div className="schema-field">
+            <span>nb_lignes_importees</span>
+            <strong>integer</strong>
+            <small>Volume traité</small>
+          </div>
+          <div className="schema-field">
+            <span>statut</span>
+            <strong>varchar(20)</strong>
+            <small>succès · échec · partiel</small>
+          </div>
+          <div className="schema-field">
+            <span>message</span>
+            <strong>text</strong>
+            <small>Résumé opérationnel</small>
+          </div>
+        </div>
       </section>
     </div>
   );

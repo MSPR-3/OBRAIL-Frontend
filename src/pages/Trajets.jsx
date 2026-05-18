@@ -6,6 +6,22 @@ import { InfoCell, Pagination } from '../components/Shared';
 import { useApi } from '../hooks/useApi';
 import { formatDuree, formatHeure } from '../utils';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    window.matchMedia('(max-width: 768px)').matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return isMobile;
+}
+
 export default function Trajets() {
   const [search, setSearch] = useState('');
   const [opFilter, setOpFilter] = useState('');
@@ -37,6 +53,7 @@ export default function Trajets() {
 
   const trajetsList = trajets?.results ?? [];
   const pages = trajets?.total_pages ?? 1;
+  const isMobile = useIsMobile();
 
   const reset = () => {
     setSearch('');
@@ -56,30 +73,13 @@ export default function Trajets() {
   return (
     <div className="page">
       <section className="panel" aria-label="Filtres des trajets">
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '2fr repeat(3, 1fr) auto',
-            gap: 12,
-            alignItems: 'end',
-          }}
-        >
+        <div className="filters-grid">
           <div className="field">
             <label htmlFor="search-depart" className="field-label">
               Ville départ
             </label>
-            <div style={{ position: 'relative' }}>
-              <span
-                style={{
-                  position: 'absolute',
-                  left: 10,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-tertiary)',
-                  pointerEvents: 'none',
-                }}
-                aria-hidden="true"
-              >
+            <div className="input-with-icon">
+              <span className="input-icon" aria-hidden="true">
                 <Icon name="search" size={14} />
               </span>
               <input
@@ -169,28 +169,13 @@ export default function Trajets() {
         </div>
       </section>
 
-      <section className="panel" style={{ padding: 0 }}>
+      <section className="panel table-panel">
         <div
-          style={{
-            padding: '14px 24px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid var(--border)',
-          }}
+          className="panel-toolbar"
           role="status"
           aria-live="polite"
         >
-          <div
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 13,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-            }}
-          >
+          <div className="panel-eyebrow">
             {loading
               ? 'Chargement…'
               : `${trajetsList.length} trajets (page ${page} / ${trajets?.total_pages ?? 1})`}
@@ -204,95 +189,158 @@ export default function Trajets() {
           </div>
         )}
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table" aria-label="Liste des trajets ferroviaires">
-            <thead>
-              <tr>
-                <th scope="col">ID</th>
-                <th scope="col">Départ</th>
-                <th scope="col">Arrivée</th>
-                <th scope="col">Heure dép.</th>
-                <th scope="col">Heure arr.</th>
-                <th scope="col" className="num">
-                  Durée
-                </th>
-                <th scope="col">Type</th>
-                <th scope="col">Opérateur</th>
-                <th scope="col">Ligne</th>
-                <th scope="col" className="num">
-                  CO₂ (kg)
-                </th>
-                <th scope="col">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {trajetsList.map((t) => (
-                <tr key={t.id_trajet}>
-                  <td className="id-cell">{t.id_trajet}</td>
-                  <td>
-                    <div className="station">{t.depart?.nom ?? '—'}</div>
-                    {(t.depart?.ville || t.depart?.code_pays) && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: 'var(--text-tertiary)',
-                          fontFamily: 'var(--font-mono)',
-                          marginTop: 2,
-                          marginLeft: 14,
-                        }}
-                      >
-                        {[t.depart?.ville, t.depart?.code_pays].filter(Boolean).join(' · ')}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <div className="station">{t.arrivee?.nom ?? '—'}</div>
-                    {(t.arrivee?.ville || t.arrivee?.code_pays) && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: 'var(--text-tertiary)',
-                          fontFamily: 'var(--font-mono)',
-                          marginTop: 2,
-                          marginLeft: 14,
-                        }}
-                      >
-                        {[t.arrivee?.ville, t.arrivee?.code_pays].filter(Boolean).join(' · ')}
-                      </div>
-                    )}
-                  </td>
-                  <td className="num">{formatHeure(t.heure_depart)}</td>
-                  <td className="num">{formatHeure(t.heure_arrivee)}</td>
-                  <td className="num">{formatDuree(t.duree_minutes)}</td>
-                  <td>
-                    <TypeBadge type={t.type_calcul} />
-                  </td>
-                  <td>{t.operateur?.nom}</td>
-                  <td>
-                    <span className="route-tag">{t.ligne?.nom_ligne}</span>
-                  </td>
-                  <td className="num" style={{ color: Number(t.emission_co2_kg ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 600 }}>
-                    {Number(t.emission_co2_kg ?? 0).toFixed(2)}
-                  </td>
-                  <td>
-                    <button
-                      className="btn"
-                      data-size="sm"
-                      onClick={() => setSelected(t)}
-                      aria-label={`Voir les détails du trajet ${t.id_trajet}`}
-                    >
-                      Détails ›
-                    </button>
-                  </td>
+        {!isMobile && (
+          <div className="table-responsive desktop-table">
+            <table className="table" aria-label="Liste des trajets ferroviaires">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Départ</th>
+                  <th scope="col">Arrivée</th>
+                  <th scope="col">Heure dép.</th>
+                  <th scope="col">Heure arr.</th>
+                  <th scope="col" className="num">
+                    Durée
+                  </th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Opérateur</th>
+                  <th scope="col">Ligne</th>
+                  <th scope="col" className="num">
+                    CO₂ (kg)
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {trajetsList.map((t) => (
+                  <tr key={t.id_trajet}>
+                    <td className="id-cell">{t.id_trajet}</td>
+                    <td>
+                      <div className="station">{t.depart?.nom ?? '—'}</div>
+                      {(t.depart?.ville || t.depart?.code_pays) && (
+                        <div className="station-meta">
+                          {[t.depart?.ville, t.depart?.code_pays].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div className="station">{t.arrivee?.nom ?? '—'}</div>
+                      {(t.arrivee?.ville || t.arrivee?.code_pays) && (
+                        <div className="station-meta">
+                          {[t.arrivee?.ville, t.arrivee?.code_pays].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="num">{formatHeure(t.heure_depart)}</td>
+                    <td className="num">{formatHeure(t.heure_arrivee)}</td>
+                    <td className="num">{formatDuree(t.duree_minutes)}</td>
+                    <td>
+                      <TypeBadge type={t.type_calcul} />
+                    </td>
+                    <td>{t.operateur?.nom}</td>
+                    <td>
+                      <span className="route-tag">{t.ligne?.nom_ligne}</span>
+                    </td>
+                    <td
+                      className="num"
+                      style={{
+                        color:
+                          Number(t.emission_co2_kg ?? 0) >= 0
+                            ? 'var(--success)'
+                            : 'var(--danger)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {Number(t.emission_co2_kg ?? 0).toFixed(2)}
+                    </td>
+                    <td>
+                      <button
+                        className="btn"
+                        data-size="sm"
+                        onClick={() => setSelected(t)}
+                        aria-label={`Voir les détails du trajet ${t.id_trajet}`}
+                      >
+                        Détails ›
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
+        {isMobile && (
+          <div className="mobile-card-list" aria-label="Liste mobile des trajets">
+            {trajetsList.map((t) => (
+              <article className="data-card trajet-card" key={t.id_trajet}>
+                <div className="data-card-head">
+                  <div>
+                    <div className="data-card-kicker">{t.id_trajet}</div>
+                    <h3 className="data-card-title">
+                      {t.depart?.ville ?? t.depart?.nom ?? '—'} →{' '}
+                      {t.arrivee?.ville ?? t.arrivee?.nom ?? '—'}
+                    </h3>
+                  </div>
+                  <TypeBadge type={t.type_calcul} />
+                </div>
+                <div className="route-pair">
+                  <div>
+                    <span>Départ</span>
+                    <strong>{t.depart?.nom ?? '—'}</strong>
+                    <small>
+                      {[t.depart?.ville, t.depart?.code_pays].filter(Boolean).join(' · ') || '—'}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Arrivée</span>
+                    <strong>{t.arrivee?.nom ?? '—'}</strong>
+                    <small>
+                      {[t.arrivee?.ville, t.arrivee?.code_pays].filter(Boolean).join(' · ') ||
+                        '—'}
+                    </small>
+                  </div>
+                </div>
+                <div className="data-card-grid">
+                  <div>
+                    <span>Départ</span>
+                    <strong>{formatHeure(t.heure_depart)}</strong>
+                  </div>
+                  <div>
+                    <span>Arrivée</span>
+                    <strong>{formatHeure(t.heure_arrivee)}</strong>
+                  </div>
+                  <div>
+                    <span>Durée</span>
+                    <strong>{formatDuree(t.duree_minutes)}</strong>
+                  </div>
+                  <div>
+                    <span>CO₂</span>
+                    <strong className="success-value">
+                      {Number(t.emission_co2_kg ?? 0).toFixed(2)} kg
+                    </strong>
+                  </div>
+                </div>
+                <div className="data-card-foot">
+                  <span className="route-tag">{t.ligne?.nom_ligne}</span>
+                  <span className="muted tiny">{t.operateur?.nom ?? '—'}</span>
+                </div>
+                <button
+                  className="btn"
+                  data-size="sm"
+                  onClick={() => setSelected(t)}
+                  aria-label={`Voir les détails du trajet ${t.id_trajet}`}
+                >
+                  Détails ›
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <div className="panel-footer">
           <Pagination
             page={page}
             pages={pages}
@@ -407,9 +455,7 @@ function TrajetDrawer({ trajet, onClose }) {
         </div>
 
         <div className="drawer-body">
-          <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}
-          >
+          <div className="drawer-info-grid">
             <InfoCell
               label="Gare départ"
               value={trajet.depart?.nom ?? '—'}

@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
   Cell,
+  LabelList,
 } from 'recharts';
 
 import { api } from '../api';
@@ -17,6 +18,42 @@ import { MetricCard, Badge } from '../components/Layout';
 import { ChartTooltip, AXIS_STYLE, GRID_STYLE } from '../components/Shared';
 import { useApi } from '../hooks/useApi';
 import { formatDuree, opColor } from '../utils';
+
+function compactLineName(name) {
+  if (!name) return '—';
+  if (name.length <= 26) return name;
+  return `${name.slice(0, 24)}…`;
+}
+
+function LineNameTick({ x, y, payload }) {
+  const value = payload?.value ?? '';
+  const [firstWord, ...rest] = value.split(' ');
+  const secondLine = rest.join(' ');
+
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="end"
+      fill="var(--text-tertiary)"
+      fontSize={11}
+      fontFamily="IBM Plex Mono, monospace"
+    >
+      {secondLine ? (
+        <>
+          <tspan x={x} dy="-0.15em">
+            {firstWord}
+          </tspan>
+          <tspan x={x} dy="1.15em">
+            {secondLine}
+          </tspan>
+        </>
+      ) : (
+        <tspan>{value}</tspan>
+      )}
+    </text>
+  );
+}
 
 export default function Statistiques() {
   const { data: kpi, loading: l1 } = useApi(() => api.kpi(), []);
@@ -28,11 +65,23 @@ export default function Statistiques() {
   const loading = l1 || l2 || l3 || l4 || l5;
 
   const topLignes = useMemo(
-    () =>
-      (volLignes?.repartition ?? [])
+    () => {
+      const rows = (volLignes?.repartition ?? [])
         .filter((r) => r.trajets > 0)
         .slice(0, 10)
-        .map((r) => ({ name: r.nom_ligne, nb_trajets: r.trajets })),
+        .map((r, index) => ({
+          id: r.id_ligne ?? r.nom_ligne,
+          rank: index + 1,
+          name: r.nom_ligne,
+          shortName: compactLineName(r.nom_ligne),
+          nb_trajets: r.trajets,
+        }));
+      const max = Math.max(...rows.map((r) => r.nb_trajets), 1);
+      return rows.map((r) => ({
+        ...r,
+        share: Math.round((r.nb_trajets / max) * 100),
+      }));
+    },
     [volLignes],
   );
 
@@ -282,7 +331,7 @@ export default function Statistiques() {
         <div className="grid-2">
           <div
             className="chart-card"
-            aria-label="Graphique top 10 des lignes les plus fréquentées"
+            aria-label="Graphique top 10 des lignes"
             role="img"
           >
             <div className="chart-card-head">
@@ -291,29 +340,62 @@ export default function Statistiques() {
                 <div className="chart-card-sub">GET /stats/volumes?groupby=ligne</div>
               </div>
             </div>
-            <div style={{ height: 280 }}>
-              <ResponsiveContainer>
-                <BarChart
-                  data={topLignes}
-                  layout="vertical"
-                  margin={{ top: 5, right: 10, bottom: 5, left: 120 }}
-                >
-                  <CartesianGrid {...GRID_STYLE} horizontal={false} />
-                  <XAxis
-                    type="number"
-                    {...AXIS_STYLE}
-                    scale="log"
-                    domain={[1, 'auto']}
-                    allowDataOverflow
-                  />
-                  <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={120} />
-                  <Tooltip
-                    cursor={{ fill: 'var(--bg-elevated)' }}
-                    content={<ChartTooltip unit=" trajets" />}
-                  />
-                  <Bar dataKey="nb_trajets" fill="var(--accent)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="top-lines-layout">
+              <div className="top-lines-chart">
+                <ResponsiveContainer>
+                  <BarChart
+                    data={topLignes}
+                    layout="vertical"
+                    margin={{ top: 8, right: 36, bottom: 8, left: 8 }}
+                  >
+                    <CartesianGrid {...GRID_STYLE} horizontal={false} />
+                    <XAxis
+                      type="number"
+                      {...AXIS_STYLE}
+                      allowDecimals={false}
+                      tickCount={4}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="shortName"
+                      {...AXIS_STYLE}
+                      width={150}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={<LineNameTick />}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'var(--bg-elevated)' }}
+                      content={<ChartTooltip unit=" trajets" />}
+                    />
+                    <Bar dataKey="nb_trajets" name="Trajets" fill="var(--accent)" radius={[0, 4, 4, 0]}>
+                      <LabelList
+                        dataKey="nb_trajets"
+                        position="right"
+                        fill="var(--text-secondary)"
+                        fontSize={11}
+                        fontFamily="IBM Plex Mono, monospace"
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <ol className="top-lines-list" aria-label="Classement des lignes">
+                {topLignes.map((ligne) => (
+                  <li className="top-lines-item" key={ligne.id}>
+                    <span className="top-lines-rank">#{ligne.rank}</span>
+                    <div className="top-lines-main">
+                      <span className="top-lines-name">{ligne.name}</span>
+                      <div className="top-lines-bar" aria-hidden="true">
+                        <span style={{ width: `${ligne.share}%` }} />
+                      </div>
+                    </div>
+                    <strong className="top-lines-value">
+                      {ligne.nb_trajets.toLocaleString('fr-FR')}
+                    </strong>
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
 
