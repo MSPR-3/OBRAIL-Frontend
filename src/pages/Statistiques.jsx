@@ -30,24 +30,34 @@ export default function Statistiques() {
   const topLignes = useMemo(
     () =>
       (volLignes?.repartition ?? [])
+        .filter((r) => r.trajets > 0)
         .slice(0, 10)
         .map((r) => ({ name: r.nom_ligne, nb_trajets: r.trajets })),
     [volLignes],
   );
 
   const paysData = useMemo(
-    () => (volPays?.repartition ?? []).map((r) => ({ name: r.code_pays, trajets: r.trajets })),
+    () =>
+      (volPays?.repartition ?? [])
+        .filter((r) => r.trajets > 0)
+        .map((r) => ({ name: r.code_pays, trajets: r.trajets })),
     [volPays],
   );
 
   const opData = useMemo(
     () =>
-      (volOps?.repartition ?? []).map((o, i) => ({
-        name: o.nom,
-        trajets: o.trajets,
-        co2: o.trajets > 0 ? Math.round((o.co2_total_kg / o.trajets) * 100) / 100 : 0,
-        color: opColor(i),
-      })),
+      (volOps?.repartition ?? [])
+        .filter((o) => o.trajets > 0)
+        .map((o, i) => ({
+          name: o.nom,
+          trajets: o.trajets,
+          // null = recharts ignore la barre (log scale interdit les zéros)
+          co2:
+            o.co2_total_kg > 0
+              ? Math.round((o.co2_total_kg / o.trajets) * 100) / 100
+              : null,
+          color: opColor(i),
+        })),
     [volOps],
   );
 
@@ -233,8 +243,7 @@ export default function Statistiques() {
                     yAxisId="left"
                     {...AXIS_STYLE}
                     scale="log"
-                    domain={[1, 'auto']}
-                    allowDataOverflow
+                    domain={['auto', 'auto']}
                     label={{
                       value: 'log',
                       position: 'insideTopLeft',
@@ -247,9 +256,6 @@ export default function Statistiques() {
                     yAxisId="right"
                     orientation="right"
                     {...AXIS_STYLE}
-                    scale="log"
-                    domain={[0.001, 'auto']}
-                    allowDataOverflow
                   />
                   <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} content={<ChartTooltip />} />
                   <Bar yAxisId="left" dataKey="trajets" name="Trajets" radius={[4, 4, 0, 0]}>
