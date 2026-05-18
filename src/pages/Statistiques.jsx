@@ -229,8 +229,28 @@ export default function Statistiques() {
                 <BarChart data={opData} margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
                   <CartesianGrid {...GRID_STYLE} vertical={false} />
                   <XAxis dataKey="name" {...AXIS_STYLE} />
-                  <YAxis yAxisId="left" {...AXIS_STYLE} />
-                  <YAxis yAxisId="right" orientation="right" {...AXIS_STYLE} />
+                  <YAxis
+                    yAxisId="left"
+                    {...AXIS_STYLE}
+                    scale="log"
+                    domain={[1, 'auto']}
+                    allowDataOverflow
+                    label={{
+                      value: 'log',
+                      position: 'insideTopLeft',
+                      offset: 4,
+                      fill: 'var(--text-tertiary)',
+                      fontSize: 9,
+                    }}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    {...AXIS_STYLE}
+                    scale="log"
+                    domain={[0.001, 'auto']}
+                    allowDataOverflow
+                  />
                   <Tooltip cursor={{ fill: 'var(--bg-elevated)' }} content={<ChartTooltip />} />
                   <Bar yAxisId="left" dataKey="trajets" name="Trajets" radius={[4, 4, 0, 0]}>
                     {opData.map((d, i) => (
@@ -273,7 +293,13 @@ export default function Statistiques() {
                   margin={{ top: 5, right: 10, bottom: 5, left: 120 }}
                 >
                   <CartesianGrid {...GRID_STYLE} horizontal={false} />
-                  <XAxis type="number" {...AXIS_STYLE} />
+                  <XAxis
+                    type="number"
+                    {...AXIS_STYLE}
+                    scale="log"
+                    domain={[1, 'auto']}
+                    allowDataOverflow
+                  />
                   <YAxis type="category" dataKey="name" {...AXIS_STYLE} width={120} />
                   <Tooltip
                     cursor={{ fill: 'var(--bg-elevated)' }}
@@ -297,7 +323,19 @@ export default function Statistiques() {
                 <BarChart data={paysData} margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
                   <CartesianGrid {...GRID_STYLE} vertical={false} />
                   <XAxis dataKey="name" {...AXIS_STYLE} />
-                  <YAxis {...AXIS_STYLE} />
+                  <YAxis
+                    {...AXIS_STYLE}
+                    scale="log"
+                    domain={[1, 'auto']}
+                    allowDataOverflow
+                    label={{
+                      value: 'log',
+                      position: 'insideTopLeft',
+                      offset: 4,
+                      fill: 'var(--text-tertiary)',
+                      fontSize: 9,
+                    }}
+                  />
                   <Tooltip
                     cursor={{ fill: 'var(--bg-elevated)' }}
                     content={<ChartTooltip unit=" départs" />}
@@ -318,6 +356,7 @@ export default function Statistiques() {
             </h3>
             <Badge tone="neutral">GET /stats/comparatif-jour-nuit</Badge>
           </div>
+          <div className="table-responsive">
           <table className="table" aria-labelledby="comparatif-heading">
             <thead>
               <tr>
@@ -342,6 +381,7 @@ export default function Statistiques() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
