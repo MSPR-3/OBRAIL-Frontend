@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 
 import { api } from '../api';
 import { Icon, Badge, TypeBadge } from '../components/Layout';
@@ -6,6 +6,9 @@ import { InfoCell, Pagination } from '../components/Shared';
 import { useApi } from '../hooks/useApi';
 import { CLASS_META, PROBA_KEYS, trajetToObs, predictObservations, topClass } from '../predict';
 import { formatDuree, formatHeure } from '../utils';
+
+// Carte du trajet chargée à la demande (leaflet hors bundle principal)
+const TrajetMiniMap = lazy(() => import('../components/TrajetMiniMap'));
 
 function PredBadge({ state, result }) {
   if (state === 'loading') return <span className="muted tiny">…</span>;
@@ -412,6 +415,21 @@ function TrajetDrawer({ trajet, pred, onClose }) {
   const open = !!trajet;
   const drawerRef = useRef(null);
   const closeButtonRef = useRef(null);
+  const [detail, setDetail] = useState(null); // détail avec coordonnées gares (GET /trajets/{id})
+
+  useEffect(() => {
+    if (!trajet?.id_trajet) {
+      setDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setDetail(null);
+    api
+      .trajet(trajet.id_trajet)
+      .then((d) => { if (!cancelled) setDetail(d); })
+      .catch(() => { if (!cancelled) setDetail(null); });
+    return () => { cancelled = true; };
+  }, [trajet?.id_trajet]);
 
   useEffect(() => {
     if (open && closeButtonRef.current) {
@@ -588,6 +606,17 @@ function TrajetDrawer({ trajet, pred, onClose }) {
             </div>
           ) : (
             <div className="muted tiny">Prédiction indisponible.</div>
+          )}
+
+          <div className="section-title" style={{ margin: '24px 0 12px' }}>
+            Tracé du trajet
+          </div>
+          {detail ? (
+            <Suspense fallback={<div className="muted tiny">Chargement de la carte…</div>}>
+              <TrajetMiniMap dep={detail.depart} arr={detail.arrivee} />
+            </Suspense>
+          ) : (
+            <div className="muted tiny">Chargement du tracé…</div>
           )}
         </div>
       </aside>
