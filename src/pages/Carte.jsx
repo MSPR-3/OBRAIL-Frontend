@@ -219,6 +219,11 @@ export default function Carte() {
           </div>
         )}
 
+        {garesData?.error && (
+          <div style={{ marginTop: 12, color: 'var(--danger)' }} role="alert">
+            API injoignable ({garesData.error}). Vérifiez que le backend tourne et que VITE_API_URL / le proxy /api sont configurés.
+          </div>
+        )}
         {error && <div style={{ marginTop: 12, color: 'var(--danger)' }} role="alert">Erreur : {error}</div>}
       </section>
 

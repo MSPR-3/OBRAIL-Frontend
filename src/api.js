@@ -1,4 +1,5 @@
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+// `||` (pas `??`) : une VITE_API_URL vide (ARG non fourni au build) retombe sur localhost
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 async function get(path) {
   const res = await fetch(BASE + path);
