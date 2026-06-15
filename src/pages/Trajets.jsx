@@ -4,7 +4,23 @@ import { api } from '../api';
 import { Icon, Badge, TypeBadge } from '../components/Layout';
 import { InfoCell, Pagination } from '../components/Shared';
 import { useApi } from '../hooks/useApi';
+import { CLASS_META, PROBA_KEYS, trajetToObs, predictObservations, topClass } from '../predict';
 import { formatDuree, formatHeure } from '../utils';
+
+function PredBadge({ state, result }) {
+  if (state === 'loading') return <span className="muted tiny">…</span>;
+  if (state === 'error' || !result) return <span style={{ color: 'var(--text-tertiary)' }}>—</span>;
+  const cls = topClass(result);
+  const meta = CLASS_META[cls] ?? { tone: 'neutral', short: cls };
+  const probs = result.probabilities ?? {};
+  const pct = Math.round((probs[cls] ?? 0) * 100);
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <Badge tone={meta.tone}>{meta.short}</Badge>
+      <span className="muted tiny" style={{ fontFamily: 'var(--font-mono)' }}>{pct}%</span>
+    </span>
+  );
+}
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() =>
@@ -30,6 +46,8 @@ export default function Trajets() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
   const [selected, setSelected] = useState(null);
+  const [preds, setPreds] = useState({});
+  const [predState, setPredState] = useState('idle');
   const searchRef = useRef(null);
 
   const { data: operateurs } = useApi(() => api.operateurs(), []);
@@ -69,6 +87,34 @@ export default function Trajets() {
       searchRef.current.focus();
     }
   }, []);
+
+  // Prédit la classe de substitution pour les trajets de la page courante
+  useEffect(() => {
+    const list = trajets?.results ?? [];
+    if (list.length === 0) {
+      setPreds({});
+      setPredState('idle');
+      return;
+    }
+    const signal = { cancelled: false };
+    setPredState('loading');
+    predictObservations(list.map(trajetToObs), { signal })
+      .then(({ results }) => {
+        if (signal.cancelled) return;
+        const map = {};
+        list.forEach((t, i) => {
+          map[t.id_trajet] = results[i];
+        });
+        setPreds(map);
+        setPredState('done');
+      })
+      .catch(() => {
+        if (!signal.cancelled) setPredState('error');
+      });
+    return () => {
+      signal.cancelled = true;
+    };
+  }, [trajets]);
 
   return (
     <div className="page">
@@ -207,6 +253,7 @@ export default function Trajets() {
                   <th scope="col" className="num">
                     CO₂ (kg)
                   </th>
+                  <th scope="col">Prédiction IA</th>
                   <th scope="col">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -252,6 +299,9 @@ export default function Trajets() {
                       }}
                     >
                       {Number(t.emission_co2_kg ?? 0).toFixed(2)}
+                    </td>
+                    <td>
+                      <PredBadge state={predState} result={preds[t.id_trajet]} />
                     </td>
                     <td>
                       <button
@@ -323,7 +373,7 @@ export default function Trajets() {
                 </div>
                 <div className="data-card-foot">
                   <span className="route-tag">{t.ligne?.nom_ligne}</span>
-                  <span className="muted tiny">{t.operateur?.nom ?? '—'}</span>
+                  <PredBadge state={predState} result={preds[t.id_trajet]} />
                 </div>
                 <button
                   className="btn"
@@ -349,12 +399,16 @@ export default function Trajets() {
         </div>
       </section>
 
-      <TrajetDrawer trajet={selected} onClose={() => setSelected(null)} />
+      <TrajetDrawer
+        trajet={selected}
+        pred={selected ? preds[selected.id_trajet] : null}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }
 
-function TrajetDrawer({ trajet, onClose }) {
+function TrajetDrawer({ trajet, pred, onClose }) {
   const open = !!trajet;
   const drawerRef = useRef(null);
   const closeButtonRef = useRef(null);
@@ -480,6 +534,61 @@ function TrajetDrawer({ trajet, onClose }) {
             <InfoCell label="Ligne" value={trajet.ligne?.nom_ligne} />
             <InfoCell label="ID source" value={trajet.id_service} />
           </div>
+
+          <div className="section-title" style={{ margin: '24px 0 12px' }}>
+            Prédiction IA · substitution avion→train
+          </div>
+          {pred ? (
+            <div
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                padding: 14,
+              }}
+            >
+              <div style={{ marginBottom: 12 }}>
+                {(() => {
+                  const cls = topClass(pred);
+                  const meta = CLASS_META[cls] ?? { tone: 'neutral', label: cls };
+                  return <Badge tone={meta.tone}>{meta.label}</Badge>;
+                })()}
+              </div>
+              {PROBA_KEYS.map((k) => {
+                const meta = CLASS_META[k];
+                const pct = Math.round((pred.probabilities?.[k] ?? 0) * 1000) / 10;
+                const color =
+                  meta.tone === 'success'
+                    ? 'var(--success)'
+                    : meta.tone === 'warning'
+                      ? 'var(--warning)'
+                      : 'var(--text-tertiary)';
+                return (
+                  <div key={k} style={{ marginBottom: 8 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: 12,
+                        marginBottom: 3,
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      <span>{meta.label}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {pct}%
+                      </span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-base)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="muted tiny">Prédiction indisponible.</div>
+          )}
         </div>
       </aside>
     </>
