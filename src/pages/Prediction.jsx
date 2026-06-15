@@ -258,7 +258,7 @@ function ParcTab() {
               <InfoCell label="Substitution possible" value={`${counts.substitution_possible} · ${pctOf(counts.substitution_possible)}%`} accent="success" />
               <InfoCell label="Substitution difficile" value={`${counts.substitution_difficile} · ${pctOf(counts.substitution_difficile)}%`} />
               <InfoCell label="Non pertinent" value={`${counts.non_pertinent} · ${pctOf(counts.non_pertinent)}%`} />
-              <InfoCell label="Modèle" value={model?.model_name ?? '—'} sub={model?.model_source ?? undefined} />
+              <InfoCell label="Modèle" value={model?.model_name ?? '—'} />
             </div>
             <div style={{ width: '100%', height: 240 }}>
               <ResponsiveContainer>
@@ -496,7 +496,6 @@ function ManuelTab() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
               <InfoCell label="Modèle" value={result.model_name} />
               <InfoCell label="Observations" value={result.count} />
-              <InfoCell label="Source" value={result.model_source ?? '—'} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
               {(result.results ?? []).map((r, i) => {
@@ -520,7 +519,12 @@ function ManuelTab() {
               <span>Réponse brute</span>
               <Badge tone="success">200 OK</Badge>
             </div>
-            <JSONBlock data={result} />
+            {(() => {
+              // model_source = chemin interne du fichier modèle → masqué côté utilisateur
+              const { model_source, ...safe } = result;
+              void model_source;
+              return <JSONBlock data={safe} />;
+            })()}
           </section>
         </>
       )}
