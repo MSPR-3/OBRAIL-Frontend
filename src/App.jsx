@@ -6,6 +6,7 @@ import { Sidebar, Header, BottomNav } from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Documentation from './pages/Documentation';
 import Imports from './pages/Imports';
+import Prediction from './pages/Prediction';
 import Statistiques from './pages/Statistiques';
 import Trajets from './pages/Trajets';
 
@@ -14,6 +15,7 @@ const PAGE_META = {
   '/trajets': { title: 'Trajets', breadcrumb: ['Trajets'] },
   '/statistiques': { title: 'Statistiques', breadcrumb: ['Statistiques'] },
   '/imports': { title: 'Historique des imports', breadcrumb: ['Imports'] },
+  '/prediction': { title: 'Prédiction IA', breadcrumb: ['IA', 'Prédiction'] },
   '/documentation': { title: 'Documentation API', breadcrumb: ['API', 'Documentation'] },
 };
 
@@ -78,6 +80,7 @@ export default function App() {
     '/trajets': Trajets,
     '/statistiques': Statistiques,
     '/imports': Imports,
+    '/prediction': Prediction,
     '/documentation': Documentation,
   };
   const Page = pages[route] || Dashboard;

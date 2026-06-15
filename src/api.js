@@ -6,6 +6,25 @@ async function get(path) {
   return res.json();
 }
 
+async function post(path, body) {
+  const res = await fetch(BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = `${res.status} ${path}`;
+    try {
+      const err = await res.json();
+      if (err?.detail) detail = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+    } catch {
+      /* réponse non JSON */
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
 export const api = {
   kpi:          ()               => get('/stats/kpi'),
   co2:          ()               => get('/stats/co2'),
@@ -20,5 +39,6 @@ export const api = {
   trajet:       (id)             => get('/trajets/' + id),
   imports:      (p = {})         => get('/imports?' + new URLSearchParams(p)),
   importsStats: ()               => get('/imports/stats'),
+  predict:      (obs)            => post('/predict', Array.isArray(obs) ? obs : [obs]),
   health:       ()               => get('/health'),
 };

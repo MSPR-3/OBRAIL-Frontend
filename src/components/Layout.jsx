@@ -160,6 +160,7 @@ export const NAV = [
   { id: '/trajets', label: 'Trajets', icon: 'train', mobileLabel: 'Trajets' },
   { id: '/statistiques', label: 'Statistiques', icon: 'chart', mobileLabel: 'Stats' },
   { id: '/imports', label: 'Imports', icon: 'refresh', mobileLabel: 'Imports' },
+  { id: '/prediction', label: 'Prédiction IA', icon: 'pulse', mobileLabel: 'IA' },
   { id: '/documentation', label: 'Documentation API', icon: 'doc', mobileLabel: 'Docs' },
 ];
 
