@@ -158,6 +158,7 @@ export function Icon({ name, size = 18 }) {
 export const NAV = [
   { id: '/', label: 'Tableau de bord', icon: 'home', mobileLabel: 'Accueil' },
   { id: '/trajets', label: 'Trajets', icon: 'train', mobileLabel: 'Trajets' },
+  { id: '/carte', label: 'Carte du réseau', icon: 'map', mobileLabel: 'Carte' },
   { id: '/statistiques', label: 'Statistiques', icon: 'chart', mobileLabel: 'Stats' },
   { id: '/imports', label: 'Imports', icon: 'refresh', mobileLabel: 'Imports' },
   { id: '/prediction', label: 'Prédiction IA', icon: 'pulse', mobileLabel: 'IA' },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakColor } from './TweaksPanel';
 import { api } from './api'; // Ajoute cet import !
@@ -10,9 +10,13 @@ import Prediction from './pages/Prediction';
 import Statistiques from './pages/Statistiques';
 import Trajets from './pages/Trajets';
 
+// Carte chargée à la demande (leaflet ~lourd) pour alléger le bundle initial
+const Carte = lazy(() => import('./pages/Carte'));
+
 const PAGE_META = {
   '/': { title: 'Tableau de bord', breadcrumb: ['Tableau de bord'] },
   '/trajets': { title: 'Trajets', breadcrumb: ['Trajets'] },
+  '/carte': { title: 'Carte du réseau', breadcrumb: ['Carte'] },
   '/statistiques': { title: 'Statistiques', breadcrumb: ['Statistiques'] },
   '/imports': { title: 'Historique des imports', breadcrumb: ['Imports'] },
   '/prediction': { title: 'Prédiction IA', breadcrumb: ['IA', 'Prédiction'] },
@@ -78,6 +82,7 @@ export default function App() {
   const pages = {
     '/': Dashboard,
     '/trajets': Trajets,
+    '/carte': Carte,
     '/statistiques': Statistiques,
     '/imports': Imports,
     '/prediction': Prediction,
@@ -94,7 +99,9 @@ export default function App() {
       <main>
         <Header title={meta.title} breadcrumb={meta.breadcrumb} />
         <div key={route} style={{ animation: 'fadeIn 0.32s ease' }}>
-          <Page />
+          <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-tertiary)' }}>Chargement…</div>}>
+            <Page />
+          </Suspense>
         </div>
       </main>
       <BottomNav route={route} onNavigate={navigate} />
