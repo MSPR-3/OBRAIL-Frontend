@@ -22,3 +22,16 @@ const OP_COLORS = [
 export function opColor(index) {
   return OP_COLORS[index % OP_COLORS.length];
 }
+
+// Distance grand-cercle (km) entre deux points lat/lng. NaN si coord manquante.
+export function haversineKm(lat1, lng1, lat2, lng2) {
+  if ([lat1, lng1, lat2, lng2].some((v) => v == null || Number.isNaN(Number(v)))) return NaN;
+  const R = 6371;
+  const toRad = (d) => (Number(d) * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}

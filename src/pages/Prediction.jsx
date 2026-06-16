@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 import { api } from '../api';
@@ -14,7 +14,8 @@ import {
   fetchAllTrajets,
   exportPredictionsCsv,
 } from '../predict';
-import { formatDuree, formatHeure } from '../utils';
+import { formatDuree, formatHeure, haversineKm } from '../utils';
+import { formatKg, formatEur, equivalences } from '../co2';
 
 const CLASS_COLOR = {
   substitution_possible: 'var(--success)',
@@ -532,23 +533,222 @@ function ManuelTab() {
   );
 }
 
+/* ---------------- Onglet SIMULATEUR (décideur) ---------------- */
+
+const VERDICT = {
+  substitution_possible: { color: 'var(--success)', emoji: '✅', titre: 'Report avion → train conseillé' },
+  substitution_difficile: { color: 'var(--warning)', emoji: '◐', titre: 'Report possible, à étudier' },
+  non_pertinent: { color: 'var(--text-tertiary)', emoji: '✗', titre: 'Report non pertinent (pas d’offre aérienne)' },
+};
+
+const TRAIN_SPEED_KMH = 110; // vitesse commerciale moyenne (avec arrêts) pour estimer la durée
+
+function MetricRow({ label, train, avion, better, fmt }) {
+  const cell = (v, side) => {
+    const win = better === side;
+    return (
+      <div
+        style={{
+          flex: 1,
+          textAlign: side === 'train' ? 'right' : 'left',
+          fontFamily: 'var(--font-mono)',
+          fontWeight: win ? 700 : 500,
+          color: win ? 'var(--success)' : 'var(--text-primary)',
+        }}
+      >
+        {side === 'train' && win ? '★ ' : ''}{fmt(v)}{side === 'avion' && win ? ' ★' : ''}
+      </div>
+    );
+  };
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+      {cell(train, 'train')}
+      <div style={{ width: 130, textAlign: 'center', fontSize: 12, color: 'var(--text-secondary)' }}>{label}</div>
+      {cell(avion, 'avion')}
+    </div>
+  );
+}
+
+function SimulateurTab() {
+  const garesData = useApi(() => api.gares(), []);
+  const { data: model } = useApi(() => api.modelInfo(), []);
+
+  // gares géolocalisées, dédupliquées par ville+pays
+  const villes = useMemo(() => {
+    const seen = new Map();
+    (garesData?.data?.gares ?? []).forEach((g) => {
+      if (g.latitude == null || g.longitude == null) return;
+      const key = `${g.ville} · ${g.code_pays}`;
+      if (!seen.has(key)) seen.set(key, { key, ville: g.ville, code_pays: g.code_pays, lat: g.latitude, lng: g.longitude });
+    });
+    return [...seen.values()].sort((a, b) => a.key.localeCompare(b.key));
+  }, [garesData]);
+  const byKey = useMemo(() => new Map(villes.map((v) => [v.key, v])), [villes]);
+
+  const [depKey, setDepKey] = useState('');
+  const [arrKey, setArrKey] = useState('');
+  const [nuit, setNuit] = useState(false);
+  const [dureeTrain, setDureeTrain] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [res, setRes] = useState(null); // {pred, cmp}
+
+  const dep = byKey.get(depKey);
+  const arr = byKey.get(arrKey);
+  const distance = dep && arr ? haversineKm(dep.lat, dep.lng, arr.lat, arr.lng) : NaN;
+  const dureeEstimee = Number.isFinite(distance) ? Math.round((distance / TRAIN_SPEED_KMH) * 60) : 0;
+  const dureeMin = Number(dureeTrain) || dureeEstimee;
+
+  async function run() {
+    if (!dep || !arr) { setError('Choisis une ville de départ et d’arrivée (géolocalisées).'); return; }
+    setLoading(true); setError(null); setRes(null);
+    try {
+      const obs = {
+        code_pays_dep: dep.code_pays,
+        code_pays_arr: arr.code_pays,
+        duree_minutes: dureeMin,
+        heure_decimale: nuit ? 23 : 9,
+        is_nuit: nuit ? 1 : 0,
+        is_transfrontalier: dep.code_pays !== arr.code_pays ? 1 : 0,
+      };
+      const [pred, cmp] = await Promise.all([
+        api.predict([obs]),
+        api.avionCompare({
+          dep_lat: dep.lat, dep_lng: dep.lng, dep_ville: dep.ville, dep_pays: dep.code_pays,
+          arr_lat: arr.lat, arr_lng: arr.lng, arr_ville: arr.ville, arr_pays: arr.code_pays,
+          duree_train_min: dureeMin,
+        }),
+      ]);
+      setRes({ r: pred.results?.[0], cmp });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const cls = res ? topClass(res.r) : null;
+  const verdict = cls ? VERDICT[cls] : null;
+  const score = res ? Math.round((res.r?.probabilities?.[cls] ?? 0) * 100) : 0;
+  const cmp = res?.cmp;
+
+  return (
+    <>
+      <section className="panel" aria-label="Simulateur de report modal">
+        <div className="panel-head">
+          <h3 className="panel-title">Simuler une liaison</h3>
+          {model?.model_name && <Badge tone="neutral">IA · {model.model_name}</Badge>}
+        </div>
+        <div className="filters-grid" style={{ marginTop: 12, gridTemplateColumns: 'repeat(2, minmax(180px, 1fr)) auto auto' }}>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-dep">Ville de départ</label>
+            <input id="sim-dep" className="input" list="villes-list" value={depKey}
+              onChange={(e) => setDepKey(e.target.value)} placeholder="Paris · FR" />
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-arr">Ville d’arrivée</label>
+            <input id="sim-arr" className="input" list="villes-list" value={arrKey}
+              onChange={(e) => setArrKey(e.target.value)} placeholder="Berlin · DE" />
+          </div>
+          <datalist id="villes-list">
+            {villes.map((v) => <option key={v.key} value={v.key} />)}
+          </datalist>
+          <div className="field">
+            <label className="field-label">Période</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button type="button" className="btn" data-size="sm" data-variant={!nuit ? 'primary' : 'ghost'} onClick={() => setNuit(false)}>☀ Jour</button>
+              <button type="button" className="btn" data-size="sm" data-variant={nuit ? 'primary' : 'ghost'} onClick={() => setNuit(true)}>◐ Nuit</button>
+            </div>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-duree">Durée train (min)</label>
+            <input id="sim-duree" type="number" min="0" className="input" style={{ width: 120 }}
+              value={dureeTrain} placeholder={dureeEstimee ? String(dureeEstimee) : '—'}
+              onChange={(e) => setDureeTrain(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 14, flexWrap: 'wrap' }}>
+          {Number.isFinite(distance) && <Badge tone="neutral">{Math.round(distance)} km</Badge>}
+          <button className="btn" data-variant="primary" onClick={run} disabled={loading || !dep || !arr} style={{ marginLeft: 'auto' }}>
+            <Icon name="pulse" size={14} />{loading ? 'Analyse…' : 'Comparer train vs avion'}
+          </button>
+        </div>
+        {error && <div style={{ marginTop: 12, color: 'var(--danger)' }} role="alert">Erreur : {error}</div>}
+      </section>
+
+      {res && verdict && (
+        <>
+          <section className="panel" style={{ borderLeft: `4px solid ${verdict.color}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: verdict.color }}>{verdict.emoji} {verdict.titre}</div>
+                <div style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
+                  {dep.ville} → {arr.ville} · {nuit ? 'nuit' : 'jour'} · confiance IA {score}%
+                </div>
+              </div>
+              {cmp && (
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>CO₂ évité en prenant le train</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--success)' }}>{formatKg(cmp.co2_evite_kg)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{equivalences(cmp.co2_evite_kg).join(' · ') || '—'}</div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {cmp && (
+            <section className="panel">
+              <div className="panel-head">
+                <h3 className="panel-title">Train vs Avion</h3>
+                <Badge tone={cmp.avion.source === 'amadeus' ? 'success' : 'neutral'}>
+                  Avion : {cmp.avion.source === 'amadeus' ? 'données Amadeus' : 'estimation'}
+                </Badge>
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 12, fontWeight: 700 }}>
+                <div style={{ flex: 1, textAlign: 'right' }}>🚆 Train</div>
+                <div style={{ width: 130 }} />
+                <div style={{ flex: 1 }}>✈ Avion</div>
+              </div>
+              <MetricRow label="CO₂" train={cmp.train.co2_kg} avion={cmp.avion.co2_kg}
+                better={cmp.train.co2_kg <= cmp.avion.co2_kg ? 'train' : 'avion'} fmt={formatKg} />
+              <MetricRow label="Temps porte-à-porte" train={cmp.train.duree_min} avion={cmp.avion.duree_min}
+                better={cmp.train.duree_min <= cmp.avion.duree_min ? 'train' : 'avion'} fmt={formatDuree} />
+              <MetricRow label="Prix estimé" train={cmp.train.prix_eur} avion={cmp.avion.prix_eur}
+                better={cmp.train.prix_eur <= cmp.avion.prix_eur ? 'train' : 'avion'} fmt={formatEur} />
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                Avion porte-à-porte = temps de vol + ~3 h (accès aéroport, sûreté, transferts).
+                {cmp.avion.iata ? ` Vol ${cmp.avion.iata}.` : ''}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 /* ---------------- Page ---------------- */
 
 export default function Prediction() {
-  const [tab, setTab] = useState('parc');
+  const [tab, setTab] = useState('sim');
   return (
     <div className="page">
       <section className="panel" style={{ padding: 8 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn" data-variant={tab === 'sim' ? 'primary' : 'ghost'} onClick={() => setTab('sim')}>
+            Simulateur
+          </button>
           <button className="btn" data-variant={tab === 'parc' ? 'primary' : 'ghost'} onClick={() => setTab('parc')}>
-            Parc complet
+            Priorisation parc
           </button>
           <button className="btn" data-variant={tab === 'manuel' ? 'primary' : 'ghost'} onClick={() => setTab('manuel')}>
-            Simulation manuelle
+            Avancé
           </button>
         </div>
       </section>
-      {tab === 'parc' ? <ParcTab /> : <ManuelTab />}
+      {tab === 'sim' && <SimulateurTab />}
+      {tab === 'parc' && <ParcTab />}
+      {tab === 'manuel' && <ManuelTab />}
     </div>
   );
 }
