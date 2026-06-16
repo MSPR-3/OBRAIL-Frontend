@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 import { api } from '../api';
@@ -570,20 +570,33 @@ function MetricRow({ label, train, avion, better, fmt }) {
 }
 
 function SimulateurTab() {
-  const garesData = useApi(() => api.gares(), []);
   const { data: model } = useApi(() => api.modelInfo(), []);
 
-  // gares géolocalisées, dédupliquées par ville+pays
-  const villes = useMemo(() => {
-    const seen = new Map();
-    (garesData?.data?.gares ?? []).forEach((g) => {
-      if (g.latitude == null || g.longitude == null) return;
-      const key = `${g.ville} · ${g.code_pays}`;
-      if (!seen.has(key)) seen.set(key, { key, ville: g.ville, code_pays: g.code_pays, lat: g.latitude, lng: g.longitude });
-    });
-    return [...seen.values()].sort((a, b) => a.key.localeCompare(b.key));
-  }, [garesData]);
-  const byKey = useMemo(() => new Map(villes.map((v) => [v.key, v])), [villes]);
+  // Recherche serveur des gares (api.gares({search}) ~0.4-1.3s) au lieu du fetch
+  // complet (~11s sur la base de test) : plus léger et robuste.
+  const [options, setOptions] = useState([]); // [{key,ville,code_pays,lat,lng}]
+  const byKey = useMemo(() => new Map(options.map((v) => [v.key, v])), [options]);
+  const searchTimer = useRef(null);
+
+  function searchVilles(term) {
+    const q = (term || '').trim();
+    if (q.length < 2) return;
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const data = await api.gares({ search: q });
+        setOptions((prev) => {
+          const map = new Map(prev.map((v) => [v.key, v]));
+          (data?.gares ?? []).forEach((g) => {
+            if (g.latitude == null || g.longitude == null) return;
+            const key = `${g.ville} · ${g.code_pays}`;
+            if (!map.has(key)) map.set(key, { key, ville: g.ville, code_pays: g.code_pays, lat: g.latitude, lng: g.longitude });
+          });
+          return [...map.values()].sort((a, b) => a.key.localeCompare(b.key)).slice(0, 300);
+        });
+      } catch { /* recherche silencieuse */ }
+    }, 300);
+  }
 
   const [depKey, setDepKey] = useState('');
   const [arrKey, setArrKey] = useState('');
@@ -643,15 +656,17 @@ function SimulateurTab() {
           <div className="field">
             <label className="field-label" htmlFor="sim-dep">Ville de départ</label>
             <input id="sim-dep" className="input" list="villes-list" value={depKey}
-              onChange={(e) => setDepKey(e.target.value)} placeholder="Paris · FR" />
+              onChange={(e) => { setDepKey(e.target.value); searchVilles(e.target.value); }}
+              placeholder="Tape une ville (ex. Paris)" />
           </div>
           <div className="field">
             <label className="field-label" htmlFor="sim-arr">Ville d’arrivée</label>
             <input id="sim-arr" className="input" list="villes-list" value={arrKey}
-              onChange={(e) => setArrKey(e.target.value)} placeholder="Berlin · DE" />
+              onChange={(e) => { setArrKey(e.target.value); searchVilles(e.target.value); }}
+              placeholder="Tape une ville (ex. Brest)" />
           </div>
           <datalist id="villes-list">
-            {villes.map((v) => <option key={v.key} value={v.key} />)}
+            {options.map((v) => <option key={v.key} value={v.key} />)}
           </datalist>
           <div className="field">
             <label className="field-label">Période</label>
