@@ -1,9 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 import { api } from '../api';
 import { Icon, Badge } from '../components/Layout';
-import { InfoCell, JSONBlock, Pagination, ChartTooltip, AXIS_STYLE } from '../components/Shared';
+import { InfoCell, Pagination, ChartTooltip, AXIS_STYLE } from '../components/Shared';
 import { useApi } from '../hooks/useApi';
 import {
   CLASS_META,
@@ -14,49 +14,14 @@ import {
   fetchAllTrajets,
   exportPredictionsCsv,
 } from '../predict';
-import { formatDuree, formatHeure } from '../utils';
+import { formatDuree, formatHeure, haversineKm } from '../utils';
+import { formatKg, formatEur, equivalences } from '../co2';
 
 const CLASS_COLOR = {
   substitution_possible: 'var(--success)',
   substitution_difficile: 'var(--warning)',
   non_pertinent: 'var(--text-tertiary)',
 };
-
-function ProbaBar({ name, value }) {
-  const meta = CLASS_META[name] ?? { tone: 'neutral', label: name };
-  const pct = Math.round((value ?? 0) * 1000) / 10;
-  return (
-    <div style={{ marginBottom: 10 }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 12,
-          marginBottom: 4,
-          color: 'var(--text-secondary)',
-        }}
-      >
-        <span>{meta.label}</span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
-          {pct}%
-        </span>
-      </div>
-      <div
-        style={{
-          height: 8,
-          borderRadius: 4,
-          background: 'var(--bg-base)',
-          border: '1px solid var(--border)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{ width: `${pct}%`, height: '100%', background: CLASS_COLOR[name], transition: 'width 0.4s ease' }}
-        />
-      </div>
-    </div>
-  );
-}
 
 /* ---------------- Onglet PARC ---------------- */
 
@@ -357,49 +322,114 @@ function ParcTab() {
   );
 }
 
-/* ---------------- Onglet MANUEL ---------------- */
+/* ---------------- Onglet SIMULATEUR (décideur) ---------------- */
 
-function emptyObs() {
-  return {
-    code_pays_dep: 'FR',
-    code_pays_arr: 'FR',
-    duree_minutes: 120,
-    heure_decimale: 8.5,
-    is_nuit: 0,
-    is_transfrontalier: 0,
+const VERDICT = {
+  substitution_possible: { color: 'var(--success)', emoji: '✅', titre: 'Report avion → train conseillé' },
+  substitution_difficile: { color: 'var(--warning)', emoji: '◐', titre: 'Report possible, à étudier' },
+  non_pertinent: { color: 'var(--text-tertiary)', emoji: '✗', titre: 'Report non pertinent (pas d’offre aérienne)' },
+};
+
+const TRAIN_SPEED_KMH = 110; // vitesse commerciale moyenne (avec arrêts) pour estimer la durée
+
+function MetricRow({ label, train, avion, better, fmt }) {
+  const cell = (v, side) => {
+    const win = better === side;
+    return (
+      <div
+        style={{
+          flex: 1,
+          textAlign: side === 'train' ? 'right' : 'left',
+          fontFamily: 'var(--font-mono)',
+          fontWeight: win ? 700 : 500,
+          color: win ? 'var(--success)' : 'var(--text-primary)',
+        }}
+      >
+        {side === 'train' && win ? '★ ' : ''}{fmt(v)}{side === 'avion' && win ? ' ★' : ''}
+      </div>
+    );
   };
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+      {cell(train, 'train')}
+      <div style={{ width: 130, textAlign: 'center', fontSize: 12, color: 'var(--text-secondary)' }}>{label}</div>
+      {cell(avion, 'avion')}
+    </div>
+  );
 }
 
-function toPayload(rows) {
-  return rows.map((r) => ({
-    code_pays_dep: r.code_pays_dep.toUpperCase(),
-    code_pays_arr: r.code_pays_arr.toUpperCase(),
-    duree_minutes: Number(r.duree_minutes),
-    heure_decimale: Number(r.heure_decimale),
-    is_nuit: Number(r.is_nuit),
-    is_transfrontalier: Number(r.is_transfrontalier),
-  }));
-}
-
-function ManuelTab() {
+function SimulateurTab() {
+  const { data: model } = useApi(() => api.modelInfo(), []);
   const paysData = useApi(() => api.pays(), []);
   const pays = paysData?.data?.pays ?? [];
 
-  const [rows, setRows] = useState([emptyObs()]);
-  const [result, setResult] = useState(null);
+  // Repli : si /pays indisponible, on dérive les pays depuis les gares.
+  const [paysFallback, setPaysFallback] = useState([]);
+  useEffect(() => {
+    if (pays.length === 0) {
+      api.gares().then((d) => {
+        const s = new Set((d?.gares ?? []).map((g) => g.code_pays).filter(Boolean));
+        setPaysFallback([...s].sort().map((c) => ({ code_pays: c, nom_pays: c })));
+      }).catch(() => {});
+    }
+  }, [pays.length]);
+  const paysList = pays.length ? pays : paysFallback;
+
+  const [depPays, setDepPays] = useState('');
+  const [arrPays, setArrPays] = useState('');
+  const [depVille, setDepVille] = useState('');
+  const [arrVille, setArrVille] = useState('');
+  const [depCities, setDepCities] = useState([]);
+  const [arrCities, setArrCities] = useState([]);
+  const [nuit, setNuit] = useState(false);
+  const [dureeTrain, setDureeTrain] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [res, setRes] = useState(null); // {pred, cmp}
 
-  const setField = (i, key, val) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [key]: val } : r)));
-  const addRow = () => setRows((rs) => [...rs, emptyObs()]);
-  const removeRow = (i) => setRows((rs) => (rs.length > 1 ? rs.filter((_, idx) => idx !== i) : rs));
+  // Gares géolocalisées du pays choisi -> villes (dédupliquées, triées).
+  function loadCities(code, setter) {
+    setter([]);
+    if (!code) return;
+    api.gares({ code_pays: code }).then((data) => {
+      const seen = new Map();
+      (data?.gares ?? []).forEach((g) => {
+        if (g.latitude == null || g.longitude == null || seen.has(g.ville)) return;
+        seen.set(g.ville, { ville: g.ville, code_pays: g.code_pays, lat: g.latitude, lng: g.longitude });
+      });
+      setter([...seen.values()].sort((a, b) => a.ville.localeCompare(b.ville)));
+    }).catch(() => setter([]));
+  }
+  useEffect(() => { setDepVille(''); loadCities(depPays, setDepCities); }, [depPays]);
+  useEffect(() => { setArrVille(''); loadCities(arrPays, setArrCities); }, [arrPays]);
 
-  async function submit() {
-    setLoading(true);
-    setError(null);
-    setResult(null);
+  const dep = depCities.find((c) => c.ville === depVille);
+  const arr = arrCities.find((c) => c.ville === arrVille);
+  const distance = dep && arr ? haversineKm(dep.lat, dep.lng, arr.lat, arr.lng) : NaN;
+  const dureeEstimee = Number.isFinite(distance) ? Math.round((distance / TRAIN_SPEED_KMH) * 60) : 0;
+  const dureeMin = Number(dureeTrain) || dureeEstimee;
+
+  async function run() {
+    if (!dep || !arr) { setError('Choisis une ville de départ et d’arrivée (géolocalisées).'); return; }
+    setLoading(true); setError(null); setRes(null);
     try {
-      setResult(await api.predict(toPayload(rows)));
+      const obs = {
+        code_pays_dep: dep.code_pays,
+        code_pays_arr: arr.code_pays,
+        duree_minutes: dureeMin,
+        heure_decimale: nuit ? 23 : 9,
+        is_nuit: nuit ? 1 : 0,
+        is_transfrontalier: dep.code_pays !== arr.code_pays ? 1 : 0,
+      };
+      const [pred, cmp] = await Promise.all([
+        api.predict([obs]),
+        api.avionCompare({
+          dep_lat: dep.lat, dep_lng: dep.lng, dep_ville: dep.ville, dep_pays: dep.code_pays,
+          arr_lat: arr.lat, arr_lng: arr.lng, arr_ville: arr.ville, arr_pays: arr.code_pays,
+          duree_train_min: dureeMin,
+        }),
+      ]);
+      setRes({ r: pred.results?.[0], cmp });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -407,125 +437,115 @@ function ManuelTab() {
     }
   }
 
+  const cls = res ? topClass(res.r) : null;
+  const verdict = cls ? VERDICT[cls] : null;
+  const score = res ? Math.round((res.r?.probabilities?.[cls] ?? 0) * 100) : 0;
+  const cmp = res?.cmp;
+
   return (
     <>
-      <section className="panel" aria-label="Paramètres de simulation">
+      <section className="panel" aria-label="Simulateur de report modal">
         <div className="panel-head">
-          <h3 className="panel-title">Simulation manuelle</h3>
-          <Badge tone="neutral">POST /predict</Badge>
+          <h3 className="panel-title">Simuler une liaison</h3>
+          {model?.model_name && <Badge tone="neutral">IA · {model.model_name}</Badge>}
         </div>
-
-        {rows.map((row, i) => (
-          <div
-            key={i}
-            style={{
-              borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-              paddingTop: i === 0 ? 0 : 16,
-              marginTop: i === 0 ? 12 : 16,
-            }}
-          >
-            <div className="filters-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(140px, 1fr)) auto' }}>
-              <div className="field">
-                <label className="field-label" htmlFor={`dep-${i}`}>Pays départ</label>
-                <select id={`dep-${i}`} className="select" value={row.code_pays_dep} onChange={(e) => setField(i, 'code_pays_dep', e.target.value)}>
-                  {pays.length === 0 && <option value={row.code_pays_dep}>{row.code_pays_dep}</option>}
-                  {pays.map((p) => (<option key={p.code_pays} value={p.code_pays}>{p.code_pays} · {p.nom_pays}</option>))}
-                </select>
-              </div>
-              <div className="field">
-                <label className="field-label" htmlFor={`arr-${i}`}>Pays arrivée</label>
-                <select id={`arr-${i}`} className="select" value={row.code_pays_arr} onChange={(e) => setField(i, 'code_pays_arr', e.target.value)}>
-                  {pays.length === 0 && <option value={row.code_pays_arr}>{row.code_pays_arr}</option>}
-                  {pays.map((p) => (<option key={p.code_pays} value={p.code_pays}>{p.code_pays} · {p.nom_pays}</option>))}
-                </select>
-              </div>
-              <div className="field">
-                <label className="field-label" htmlFor={`duree-${i}`}>Durée (minutes)</label>
-                <input id={`duree-${i}`} type="number" min="0" step="1" className="input" value={row.duree_minutes} onChange={(e) => setField(i, 'duree_minutes', e.target.value)} />
-              </div>
-              <button className="btn" data-size="sm" onClick={() => removeRow(i)} disabled={rows.length === 1} aria-label={`Supprimer l'observation ${i + 1}`} style={{ alignSelf: 'end', minHeight: 37 }}>
-                <Icon name="trash" size={14} />
-              </button>
-            </div>
-            <div className="filters-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(140px, 1fr)) auto', marginTop: 12 }}>
-              <div className="field">
-                <label className="field-label" htmlFor={`heure-${i}`}>Heure départ (décimale)</label>
-                <input id={`heure-${i}`} type="number" min="0" max="23.99" step="0.25" className="input" value={row.heure_decimale} onChange={(e) => setField(i, 'heure_decimale', e.target.value)} />
-              </div>
-              <div className="field">
-                <label className="field-label" htmlFor={`nuit-${i}`}>Trajet de nuit</label>
-                <select id={`nuit-${i}`} className="select" value={row.is_nuit} onChange={(e) => setField(i, 'is_nuit', e.target.value)}>
-                  <option value={0}>Non</option>
-                  <option value={1}>Oui</option>
-                </select>
-              </div>
-              <div className="field">
-                <label className="field-label" htmlFor={`front-${i}`}>Transfrontalier</label>
-                <select id={`front-${i}`} className="select" value={row.is_transfrontalier} onChange={(e) => setField(i, 'is_transfrontalier', e.target.value)}>
-                  <option value={0}>Non</option>
-                  <option value={1}>Oui</option>
-                </select>
-              </div>
-              <span />
-            </div>
+        <div className="filters-grid" style={{ marginTop: 12, gridTemplateColumns: 'repeat(2, minmax(150px, 1fr))' }}>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-dep-pays">Pays de départ</label>
+            <select id="sim-dep-pays" className="select" value={depPays} onChange={(e) => setDepPays(e.target.value)}>
+              <option value="">— Choisir —</option>
+              {paysList.map((p) => <option key={p.code_pays} value={p.code_pays}>{p.code_pays} · {p.nom_pays}</option>)}
+            </select>
           </div>
-        ))}
-
-        <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-          <button className="btn" onClick={addRow} aria-label="Ajouter une observation">+ Ajouter une observation</button>
-          <button className="btn" data-variant="primary" onClick={submit} disabled={loading} aria-label="Lancer la prédiction">
-            <Icon name="pulse" size={14} />
-            {loading ? 'Prédiction…' : 'Prédire'}
+          <div className="field">
+            <label className="field-label" htmlFor="sim-dep-ville">Ville de départ</label>
+            <select id="sim-dep-ville" className="select" value={depVille} onChange={(e) => setDepVille(e.target.value)} disabled={!depPays}>
+              <option value="">{depPays ? `— Choisir (${depCities.length}) —` : '— Pays d’abord —'}</option>
+              {depCities.map((c) => <option key={c.ville} value={c.ville}>{c.ville}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-arr-pays">Pays d’arrivée</label>
+            <select id="sim-arr-pays" className="select" value={arrPays} onChange={(e) => setArrPays(e.target.value)}>
+              <option value="">— Choisir —</option>
+              {paysList.map((p) => <option key={p.code_pays} value={p.code_pays}>{p.code_pays} · {p.nom_pays}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-arr-ville">Ville d’arrivée</label>
+            <select id="sim-arr-ville" className="select" value={arrVille} onChange={(e) => setArrVille(e.target.value)} disabled={!arrPays}>
+              <option value="">{arrPays ? `— Choisir (${arrCities.length}) —` : '— Pays d’abord —'}</option>
+              {arrCities.map((c) => <option key={c.ville} value={c.ville}>{c.ville}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-periode">Période</label>
+            <select id="sim-periode" className="select" value={nuit ? 'nuit' : 'jour'} onChange={(e) => setNuit(e.target.value === 'nuit')}>
+              <option value="jour">☀ Jour</option>
+              <option value="nuit">◐ Nuit</option>
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="sim-duree">Durée train (min)</label>
+            <input id="sim-duree" type="number" min="0" className="input"
+              value={dureeTrain} placeholder={dureeEstimee ? `auto : ${dureeEstimee}` : '—'}
+              onChange={(e) => setDureeTrain(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 14, flexWrap: 'wrap' }}>
+          {Number.isFinite(distance) && <Badge tone="neutral">{Math.round(distance)} km</Badge>}
+          <button className="btn" data-variant="primary" onClick={run} disabled={loading || !dep || !arr} style={{ marginLeft: 'auto' }}>
+            <Icon name="pulse" size={14} />{loading ? 'Analyse…' : 'Comparer train vs avion'}
           </button>
         </div>
+        {error && <div style={{ marginTop: 12, color: 'var(--danger)' }} role="alert">Erreur : {error}</div>}
       </section>
 
-      {error && (
-        <section className="panel" role="alert">
-          <div style={{ color: 'var(--danger)' }}>Erreur : {error}</div>
-        </section>
-      )}
-
-      {result && (
+      {res && verdict && (
         <>
-          <section className="panel">
-            <div className="panel-head">
-              <h3 className="panel-title">Résultats</h3>
-              <Badge tone="success">{result.count} prédiction(s)</Badge>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
-              <InfoCell label="Modèle" value={result.model_name} />
-              <InfoCell label="Observations" value={result.count} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {(result.results ?? []).map((r, i) => {
-                const cls = topClass(r);
-                const meta = CLASS_META[cls] ?? { tone: 'neutral', label: cls };
-                return (
-                  <div key={i} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                      <div className="panel-eyebrow">Observation #{i + 1}</div>
-                      <Badge tone={meta.tone}>{meta.label}</Badge>
-                    </div>
-                    {PROBA_KEYS.map((k) => (<ProbaBar key={k} name={k} value={r.probabilities?.[k]} />))}
-                  </div>
-                );
-              })}
+          <section className="panel" style={{ borderLeft: `4px solid ${verdict.color}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: verdict.color }}>{verdict.emoji} {verdict.titre}</div>
+                <div style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
+                  {dep.ville} → {arr.ville} · {nuit ? 'nuit' : 'jour'} · confiance IA {score}%
+                </div>
+              </div>
+              {cmp && (
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>CO₂ évité en prenant le train</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--success)' }}>{formatKg(cmp.co2_evite_kg)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{equivalences(cmp.co2_evite_kg).join(' · ') || '—'}</div>
+                </div>
+              )}
             </div>
           </section>
 
-          <section className="panel">
-            <div className="section-kicker section-kicker-row">
-              <span>Réponse brute</span>
-              <Badge tone="success">200 OK</Badge>
-            </div>
-            {(() => {
-              // model_source = chemin interne du fichier modèle → masqué côté utilisateur
-              const { model_source, ...safe } = result;
-              void model_source;
-              return <JSONBlock data={safe} />;
-            })()}
-          </section>
+          {cmp && (
+            <section className="panel">
+              <div className="panel-head">
+                <h3 className="panel-title">Train vs Avion</h3>
+                <Badge tone={cmp.avion.source === 'amadeus' ? 'success' : 'neutral'}>
+                  Avion : {cmp.avion.source === 'amadeus' ? 'données Amadeus' : 'estimation'}
+                </Badge>
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 12, fontWeight: 700 }}>
+                <div style={{ flex: 1, textAlign: 'right' }}>🚆 Train</div>
+                <div style={{ width: 130 }} />
+                <div style={{ flex: 1 }}>✈ Avion</div>
+              </div>
+              <MetricRow label="CO₂" train={cmp.train.co2_kg} avion={cmp.avion.co2_kg}
+                better={cmp.train.co2_kg <= cmp.avion.co2_kg ? 'train' : 'avion'} fmt={formatKg} />
+              <MetricRow label="Temps porte-à-porte" train={cmp.train.duree_min} avion={cmp.avion.duree_min}
+                better={cmp.train.duree_min <= cmp.avion.duree_min ? 'train' : 'avion'} fmt={formatDuree} />
+              <MetricRow label="Prix estimé" train={cmp.train.prix_eur} avion={cmp.avion.prix_eur}
+                better={cmp.train.prix_eur <= cmp.avion.prix_eur ? 'train' : 'avion'} fmt={formatEur} />
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                Avion porte-à-porte = temps de vol + ~3 h (accès aéroport, sûreté, transferts).
+                {cmp.avion.iata ? ` Vol ${cmp.avion.iata}.` : ''}
+              </div>
+            </section>
+          )}
         </>
       )}
     </>
@@ -535,20 +555,21 @@ function ManuelTab() {
 /* ---------------- Page ---------------- */
 
 export default function Prediction() {
-  const [tab, setTab] = useState('parc');
+  const [tab, setTab] = useState('sim');
   return (
     <div className="page">
       <section className="panel" style={{ padding: 8 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn" data-variant={tab === 'parc' ? 'primary' : 'ghost'} onClick={() => setTab('parc')}>
-            Parc complet
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn" data-variant={tab === 'sim' ? 'primary' : 'ghost'} onClick={() => setTab('sim')}>
+            Simulateur
           </button>
-          <button className="btn" data-variant={tab === 'manuel' ? 'primary' : 'ghost'} onClick={() => setTab('manuel')}>
-            Simulation manuelle
+          <button className="btn" data-variant={tab === 'parc' ? 'primary' : 'ghost'} onClick={() => setTab('parc')}>
+            Priorisation parc
           </button>
         </div>
       </section>
-      {tab === 'parc' ? <ParcTab /> : <ManuelTab />}
+      {tab === 'sim' && <SimulateurTab />}
+      {tab === 'parc' && <ParcTab />}
     </div>
   );
 }

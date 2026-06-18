@@ -41,5 +41,7 @@ export const api = {
   imports:      (p = {})         => get('/imports?' + new URLSearchParams(p)),
   importsStats: ()               => get('/imports/stats'),
   predict:      (obs)            => post('/predict', Array.isArray(obs) ? obs : [obs]),
+  avionCompare: (p = {})         => get('/avion/compare?' + new URLSearchParams(p)),
+  modelInfo:    ()               => get('/model/info'),
   health:       ()               => get('/health'),
 };
