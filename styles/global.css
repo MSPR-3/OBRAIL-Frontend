@@ -1682,6 +1682,62 @@ main {
   gap: var(--pad-md);
   grid-template-columns: 1fr 2fr;
 }
+
+/* Accessibilité — cartes des 6 familles de handicap */
+.a11y-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--pad-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color var(--t-fast);
+}
+.a11y-card:hover {
+  border-color: var(--border-strong);
+}
+.a11y-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.a11y-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.a11y-card-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+.a11y-card-mesure {
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+.a11y-card-mise {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.45;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+.a11y-card-mise .badge {
+  flex-shrink: 0;
+}
 .table-responsive {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
