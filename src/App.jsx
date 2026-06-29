@@ -3,6 +3,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakColor } from './TweaksPanel';
 import { api } from './api'; // Ajoute cet import !
 import { Sidebar, Header, BottomNav } from './components/Layout';
+import Accessibilite from './pages/Accessibilite';
 import Dashboard from './pages/Dashboard';
 import Documentation from './pages/Documentation';
 import Imports from './pages/Imports';
@@ -21,6 +22,7 @@ const PAGE_META = {
   '/imports': { title: 'Historique des imports', breadcrumb: ['Imports'] },
   '/prediction': { title: 'Prédiction IA', breadcrumb: ['IA', 'Prédiction'] },
   '/documentation': { title: 'Documentation API', breadcrumb: ['API', 'Documentation'] },
+  '/accessibilite': { title: 'Accessibilité', breadcrumb: ['Accessibilité'] },
 };
 
 function getRoute() {
@@ -87,6 +89,7 @@ export default function App() {
     '/imports': Imports,
     '/prediction': Prediction,
     '/documentation': Documentation,
+    '/accessibilite': Accessibilite,
   };
   const Page = pages[route] || Dashboard;
 

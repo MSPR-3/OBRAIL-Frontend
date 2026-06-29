@@ -151,6 +151,14 @@ export function Icon({ name, size = 18 }) {
         <line x1="16" y1="6" x2="16" y2="22" />
       </>
     ),
+    accessibility: (
+      <>
+        <circle cx="12" cy="4.5" r="1.4" fill="currentColor" stroke="none" />
+        <path d="M4.5 8.5c2.4 1 4.9 1.5 7.5 1.5s5.1-.5 7.5-1.5" />
+        <path d="M12 10v5" />
+        <path d="M8.4 21l3.6-6 3.6 6" />
+      </>
+    ),
   };
   return <svg {...props}>{paths[name] || null}</svg>;
 }
@@ -163,6 +171,7 @@ export const NAV = [
   { id: '/imports', label: 'Imports', icon: 'refresh', mobileLabel: 'Imports' },
   { id: '/prediction', label: 'Prédiction IA', icon: 'pulse', mobileLabel: 'IA' },
   { id: '/documentation', label: 'Documentation API', icon: 'doc', mobileLabel: 'Docs' },
+  { id: '/accessibilite', label: 'Accessibilité', icon: 'accessibility', mobileLabel: 'A11y' },
 ];
 
 // COMPOSANT LAYOUT PRINCIPAL
